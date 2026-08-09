@@ -38,7 +38,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -72,11 +72,35 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             exe="${exe}.exe"
             cp "$exe" "dist/cxt-${{ matrix.target }}.exe"
-            powershell -Command "Compress-Archive -Path 'dist/cxt-${{ matrix.target }}.exe' -DestinationPath 'dist/cxt-${{ matrix.target }}.zip' -Force"
-            rm "dist/cxt-${{ matrix.target }}.exe"
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            cp "$exe" "dist/cxt"
+            chmod +x "dist/cxt"
+            mkdir -p "dist/cxt-macos"
+            mv "dist/cxt" "dist/cxt-macos/cxt"
+            hdiutil create -volname cxt -srcfolder "dist/cxt-macos" -ov -format UDZO "dist/cxt-${{ matrix.target }}.dmg"
+            rm -rf "dist/cxt-macos"
           else
             cp "$exe" "dist/cxt-${{ matrix.target }}"
             tar -czf "dist/cxt-${{ matrix.target }}.tar.gz" -C dist "cxt-${{ matrix.target }}"
+            if [ "${{ matrix.target }}" = "x86_64-unknown-linux-gnu" ] || [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+              deb_arch="amd64"
+              [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ] && deb_arch="arm64"
+              deb_root="dist/deb-root"
+              mkdir -p "$deb_root/DEBIAN" "$deb_root/usr/bin"
+              cp "dist/cxt-${{ matrix.target }}" "$deb_root/usr/bin/cxt"
+              chmod 755 "$deb_root/usr/bin/cxt"
+              cat > "$deb_root/DEBIAN/control" <<EOF
+Package: cxt
+Version: ${GITHUB_REF_NAME#v}
+Section: utils
+Priority: optional
+Architecture: $deb_arch
+Maintainer: Chinmay Krishn Roy
+Description: Fast AST-aware context packer for LLMs
+EOF
+              dpkg-deb --build "$deb_root" "dist/cxt_${GITHUB_REF_NAME#v}_${deb_arch}.deb"
+              rm -rf "$deb_root"
+            fi
             rm "dist/cxt-${{ matrix.target }}"
           fi
 
@@ -94,7 +118,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout installer scripts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:

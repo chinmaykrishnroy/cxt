@@ -36,6 +36,34 @@ The result is copied to your clipboard or written to a file, ready to paste into
 
 ## Install
 
+### Download the latest release
+
+The CI page verifies the code. Downloadable binaries are published on the
+[Releases page](https://github.com/chinmaykrishnroy/cxt/releases/latest) when a version tag is pushed.
+
+| Platform | Download |
+| --- | --- |
+| Windows x64 | [Download `.exe`](https://github.com/chinmaykrishnroy/cxt/releases/latest/download/cxt-x86_64-pc-windows-msvc.exe) |
+| Windows ARM64 | [Download `.exe`](https://github.com/chinmaykrishnroy/cxt/releases/latest/download/cxt-aarch64-pc-windows-msvc.exe) |
+| macOS Intel | [Download `.dmg`](https://github.com/chinmaykrishnroy/cxt/releases/latest/download/cxt-x86_64-apple-darwin.dmg) |
+| macOS Apple Silicon | [Download `.dmg`](https://github.com/chinmaykrishnroy/cxt/releases/latest/download/cxt-aarch64-apple-darwin.dmg) |
+| Debian/Ubuntu x64 | [Download `.deb`](https://github.com/chinmaykrishnroy/cxt/releases/latest/download/cxt_0.1.0_amd64.deb) |
+| Debian/Ubuntu ARM64 | [Download `.deb`](https://github.com/chinmaykrishnroy/cxt/releases/latest/download/cxt_0.1.0_arm64.deb) |
+
+Install downloaded packages with:
+
+```bash
+# Debian / Ubuntu
+sudo dpkg -i cxt_0.1.0_amd64.deb
+
+# macOS: open the downloaded DMG, then copy cxt to /usr/local/bin
+sudo cp /Volumes/cxt/cxt /usr/local/bin/cxt
+sudo chmod +x /usr/local/bin/cxt
+
+# Windows PowerShell: run the downloaded executable
+.\cxt-x86_64-pc-windows-msvc.exe --help
+```
+
 ### One-command install
 
 ```bash
@@ -149,7 +177,3 @@ cargo build --release
 ```
 
 Contributions are welcome. Good areas include additional import resolvers, tokenizer-backed estimates, richer output formats, and more integration tests.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
