@@ -89,15 +89,7 @@ jobs:
               mkdir -p "$deb_root/DEBIAN" "$deb_root/usr/bin"
               cp "dist/cxt-${{ matrix.target }}" "$deb_root/usr/bin/cxt"
               chmod 755 "$deb_root/usr/bin/cxt"
-              cat > "$deb_root/DEBIAN/control" <<EOF
-Package: cxt
-Version: ${GITHUB_REF_NAME#v}
-Section: utils
-Priority: optional
-Architecture: $deb_arch
-Maintainer: Chinmay Krishn Roy
-Description: Fast AST-aware context packer for LLMs
-EOF
+              printf 'Package: cxt\nVersion: %s\nSection: utils\nPriority: optional\nArchitecture: %s\nMaintainer: Chinmay Krishn Roy\nDescription: Fast AST-aware context packer for LLMs\n' "${GITHUB_REF_NAME#v}" "$deb_arch" > "$deb_root/DEBIAN/control"
               dpkg-deb --build "$deb_root" "dist/cxt_${GITHUB_REF_NAME#v}_${deb_arch}.deb"
               rm -rf "$deb_root"
             fi
