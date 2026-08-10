@@ -567,6 +567,26 @@ fn diff_mode_packs_only_untracked_files() {
 }
 
 #[test]
+fn diff_mode_packs_modified_files_and_excludes_ignored_files() {
+    let dir = temp_dir("git-diff-modified");
+    init_git_repo(&dir);
+    commit_file(&dir, ".gitignore", "ignored.txt\n", "add ignore rules");
+    commit_file(&dir, "tracked.py", "print(1)\n", "track baseline");
+    write_file(&dir, "tracked.py", "print(2)\n");
+    write_file(&dir, "ignored.txt", "do not pack\n");
+
+    let out = run_cxt(&dir, &["--diff", "--output", "out.md"]);
+    assert_success(&out);
+
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("tracked.py"));
+    assert!(md.contains("print(2)"));
+    assert!(!md.contains("ignored.txt"));
+    assert!(!md.contains("do not pack"));
+    assert_eq!(packed_file_count(&md), 1);
+}
+
+#[test]
 fn dry_run_lists_selected_files() {
     let dir = temp_dir("dry-run");
     write_file(&dir, "main.py", "print('hi')\n");

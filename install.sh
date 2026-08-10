@@ -14,4 +14,14 @@ tar -xzf "$tmp/$archive" -C "$tmp"
 install_dir="${CXT_INSTALL_DIR:-$HOME/.local/bin}"
 mkdir -p "$install_dir"
 install "$tmp/cxt-$target" "$install_dir/cxt"
-echo "Installed cxt to $install_dir/cxt"
+case ":${PATH}:" in
+  *":$install_dir:"*) echo "Installed cxt to $install_dir/cxt" ;;
+  *)
+    profile="$HOME/.profile"
+    [ "$platform" = "apple-darwin" ] && profile="$HOME/.zprofile"
+    if ! grep -Fqs "export PATH=\"$install_dir:\$PATH\"" "$profile" 2>/dev/null; then
+      printf '\nexport PATH="%s:$PATH"\n' "$install_dir" >> "$profile"
+    fi
+    echo "Installed cxt to $install_dir/cxt and added it to $profile. Open a new terminal to use cxt."
+    ;;
+esac

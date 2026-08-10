@@ -74,6 +74,8 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/chinmaykrishnroy/cxt/re
 irm https://github.com/chinmaykrishnroy/cxt/releases/latest/download/install.ps1 | iex
 ```
 
+The Windows installer places `cxt.exe` in `%LOCALAPPDATA%\Programs\cxt` and adds that directory to the current user's PATH. Open a new terminal afterward, then run `cxt --help`.
+
 Or download a platform binary from [Releases](https://github.com/chinmaykrishnroy/cxt/releases/latest).
 
 ### From source
@@ -97,10 +99,10 @@ The binary is created at `target/release/cxt` (`cxt.exe` on Windows).
 ## Quick start
 
 ```bash
-# Pack the current project
-cxt .
+# Pack the current project (the default path is the current directory)
+cxt
 
-# Pack only changed and untracked files
+# Pack only changed and untracked files in the current Git repository
 cxt --diff
 
 # Follow imports from one entry file
@@ -110,10 +112,10 @@ cxt src/main.rs --trace
 cxt src/main.rs --trace --minify
 
 # Write Markdown instead of using the clipboard
-cxt . --output context.md
+cxt --output context.md
 
 # Preview the selection without producing output
-cxt . --dry-run
+cxt --dry-run
 ```
 
 See every option with:
