@@ -89,13 +89,17 @@ fn prepare_with_progress(args: &Args, cwd: &Path) -> Result<SelectionPreview, En
     }
 
     let pb = ProgressBar::new_spinner();
+    if pb.is_hidden() {
+        eprintln!("[cxt] Scanning project, applying filters and building context candidates…");
+    }
     pb.set_style(
         ProgressStyle::with_template("{spinner:.cyan} {msg}")
             .unwrap()
             .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
     );
-    pb.enable_steady_tick(Duration::from_millis(80));
     pb.set_message("Scanning project, applying filters and building context candidates…");
+    pb.tick();
+    pb.enable_steady_tick(Duration::from_millis(80));
     let result = engine::prepare(args, cwd);
     pb.finish_and_clear();
     result
@@ -113,13 +117,17 @@ fn pack_with_progress(
     let total = prepared.candidates.len();
     let root = prepared.root.clone();
     let pb = ProgressBar::new(total as u64);
+    if pb.is_hidden() {
+        eprintln!("[cxt] Packing {} context candidates…", total);
+    }
     pb.set_style(
         ProgressStyle::with_template("{spinner:.cyan} [{bar:28.cyan/blue}] {pos:>4}/{len:4} {msg}")
             .unwrap()
             .progress_chars("━━╸"),
     );
-    pb.enable_steady_tick(Duration::from_millis(80));
     pb.set_message("Packing context…");
+    pb.tick();
+    pb.enable_steady_tick(Duration::from_millis(80));
 
     let result =
         engine::run_prepared_with_progress(args, cwd, prepared, |index, count, path, bytes| {

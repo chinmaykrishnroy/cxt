@@ -10,6 +10,21 @@ fn packed_file_count(output_md: &str) -> usize {
 }
 
 #[test]
+fn scripted_stdout_contains_only_context_without_progress() {
+    let dir = temp_dir("progress-stdout");
+    write_file(&dir, "main.rs", "fn main() {}\n");
+    for flag in ["--stdout", "--ci"] {
+        let out = run_cxt(&dir, &["main.rs", flag]);
+        assert_success(&out);
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(stdout.contains("fn main() {}"));
+        assert!(!stdout.contains("[cxt]"));
+        assert!(!stdout.contains("Scanning"));
+        assert!(!stdout.contains('\u{1b}'));
+    }
+}
+
+#[test]
 fn help_and_version_work() {
     let dir = temp_dir("help");
 

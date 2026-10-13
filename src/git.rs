@@ -39,7 +39,7 @@ pub fn changes_with_limits(
         args.push("--");
         let fields = run_paths(root, &args)?;
         budget.check_time()?;
-        for pair in fields.chunks_exact(2) {
+        for pair in fields.as_chunks::<2>().0 {
             if !paths.contains_key(&root.join(&pair[1])) {
                 budget.visit(0)?;
             }

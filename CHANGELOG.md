@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 (2026-10-14)
+
+- Updated Git status pair iteration for compatibility with the latest Clippy lint without changing selection behavior.
+- Draw CLI scanning and packing progress immediately before starting work; animation remains on terminal stderr and is disabled in CI.
+
 ## 0.4.1 (2026-10-14)
 
 - Made startup CLI-first: bare `cxt` packs the current directory to clipboard; `--tui` / `-T` explicitly opens interactive review, and `-t` remains tracing.

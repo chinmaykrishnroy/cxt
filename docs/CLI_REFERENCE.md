@@ -181,6 +181,8 @@ Broad-scan permission is deliberately not a configuration key. Start from [the c
 
 ## Installation and troubleshooting
 
+Interactive CLI runs show a scanning spinner and per-file packing progress on stderr. Terminals advertising `TERM=dumb` receive plain phase messages instead; redirected stderr and `--ci` suppress progress. If progress or features appear outdated, check `cxt --version` and `Get-Command cxt -All` in PowerShell: an older executable earlier on PATH can shadow a newer installation.
+
 Use [README installation instructions](../README.md#install). Downloading a standalone `.exe` or opening a `.dmg` does not install a CLI command or add it to PATH. The release scripts install into a user-writable location and configure PATH; reopen the shell if needed. Debian packages install system-wide through the package manager and normally require elevated privileges. Package-manager publication status is separate from GitHub release assets; see [packaging instructions](../packaging/README.md).
 
 ```powershell
