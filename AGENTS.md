@@ -1,35 +1,28 @@
 # Agent Notes for cxt
 
-## Build
+## Validate
 
-```powershell
+```bash
+cargo fmt -- --check
+cargo test --all-targets
+cargo clippy --all-targets --all-features -- -D warnings
 cargo build --release
 ```
 
-## Run locally
+## Useful smoke tests
 
-```powershell
-cargo run -- src/main.rs --trace
+```bash
+cargo run -- --help
+cargo run -- . --dry-run
+cargo run -- src/main.rs --trace --dry-run
+cargo run -- . --query "context budget" --budget 20000 --dry-run
+cargo run -- --git working --impact --dry-run
+# Manual terminal smoke tests
+cargo run --              # bare interactive invocation should open TUI
+cargo run -- --tui        # explicit TUI still works
 ```
 
-## Install globally
+## Architecture
 
-```powershell
-cargo install --path .
-```
+`src/main.rs` only owns CLI/TUI handoff, delivery, and exit behavior. `src/tui.rs` may edit prepared selections but must not duplicate the packing/security/rendering pipeline. Selection and transformation belong in `cxt_core` modules. Keep context selection deterministic and local-first; do not add network or LLM calls to core selection paths without an explicit opt-in design.
 
-The installed binary is placed in `%USERPROFILE%\.cargo\bin`.
-
-## PATH notes (Windows)
-
-- Cargo/rustc live in `%USERPROFILE%\.cargo\bin`.
-- `winget` lives in `%LOCALAPPDATA%\Microsoft\WindowsApps`.
-- Both should be on the user `PATH` to use `cargo`, `cxt`, and `winget` from a fresh terminal.
-
-## Useful commands
-
-- `cxt --diff` — pack only changed/untracked files.
-- `cxt src/main.rs --trace` — AST trace dependencies.
-- `cxt --minify` — AST-aware minification (strip comments + whitespace).
-- `cxt --output <FILE>` — write output to a file instead of the clipboard.
-- `cxt <path>` — directory scan respecting `.gitignore`.

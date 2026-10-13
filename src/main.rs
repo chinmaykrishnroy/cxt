@@ -1,474 +1,330 @@
 use arboard::Clipboard;
 use clap::Parser;
-use colored::Colorize;
-use globset::{Glob, GlobSet, GlobSetBuilder};
-use ignore::overrides::OverrideBuilder;
-use ignore::WalkBuilder;
+use cxt_core::cli::Args;
+use cxt_core::engine::{self, EngineError, EngineResult, SelectionPreview};
+use cxt_core::output::Compression;
+use cxt_core::tui;
+use flate2::write::GzEncoder;
+use flate2::Compression as GzipLevel;
 use indicatif::{ProgressBar, ProgressStyle};
-use minifier::{count_tokens, minify_code, redact_secrets, strip_comments};
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread::{self, JoinHandle};
+use std::io::{self, Cursor, IsTerminal, Write};
+use std::path::Path;
 use std::time::Duration;
-use tracer::get_language;
-use utils::is_binary_file;
-
-mod config;
-mod minifier;
-mod resolver;
-mod shimmer;
-mod tracer;
-mod utils;
-
-#[derive(Parser, Debug)]
-#[command(author, version, about = "Blazing fast, smart context packer for LLMs", long_about = None)]
-struct Args {
-    /// Target path to scan (or entry file for AST tracing)
-    #[arg(default_value = ".")]
-    path: PathBuf,
-
-    /// Only pack files with uncommitted Git changes
-    #[arg(short, long)]
-    diff: bool,
-
-    /// Minify code (strip comments and extra whitespace) to save LLM tokens
-    #[arg(short, long)]
-    minify: bool,
-
-    /// Enable AST tracing to only pack dependencies of a specific file
-    #[arg(short, long)]
-    trace: bool,
-
-    /// Write output to a file instead of copying to the clipboard
-    #[arg(short, long)]
-    output: Option<PathBuf>,
-
-    /// Bypass file size and lock/minified-file safety limits
-    #[arg(long)]
-    no_limit: bool,
-
-    /// Show selected files without generating or copying output
-    #[arg(long)]
-    dry_run: bool,
-}
-
-const MAX_FILE_SIZE: u64 = 1024 * 1024; // 1 MB
-
-fn get_git_modified_files() -> Vec<PathBuf> {
-    let mut files = Vec::new();
-
-    if let Ok(output) = Command::new("git")
-        .args(["diff", "--name-only", "HEAD"])
-        .output()
-    {
-        for line in String::from_utf8_lossy(&output.stdout).lines() {
-            files.push(PathBuf::from(line));
-        }
-    }
-
-    if let Ok(output) = Command::new("git")
-        .args(["ls-files", "--others", "--exclude-standard"])
-        .output()
-    {
-        for line in String::from_utf8_lossy(&output.stdout).lines() {
-            files.push(PathBuf::from(line));
-        }
-    }
-
-    files
-}
-
-fn build_ignore_globset(patterns: &[String]) -> GlobSet {
-    let mut builder = GlobSetBuilder::new();
-    for p in patterns {
-        let normalized = config::normalize_ignore_pattern(p);
-        if let Ok(g) = Glob::new(&normalized) {
-            builder.add(g);
-        }
-    }
-    builder
-        .build()
-        .unwrap_or_else(|_| GlobSetBuilder::new().build().unwrap())
-}
-
-fn build_ignore_overrides(patterns: &[String], root: &Path) -> ignore::overrides::Override {
-    let mut builder = OverrideBuilder::new(root);
-    for p in patterns {
-        let normalized = config::normalize_ignore_pattern(p);
-        let _ = builder.add(&format!("!{}", normalized));
-    }
-    builder
-        .build()
-        .unwrap_or_else(|_| OverrideBuilder::new(root).build().unwrap())
-}
-
-fn should_skip_file(path: &Path, no_limit: bool, ignore_globset: &GlobSet) -> bool {
-    if !no_limit {
-        if let Ok(meta) = fs::metadata(path) {
-            if meta.len() > MAX_FILE_SIZE {
-                return true;
-            }
-        }
-
-        let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
-        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-
-        if file_name.ends_with(".lock")
-            || file_name.ends_with("-lock.json")
-            || ext == "svg"
-            || ext == "png"
-            || ext == "jpg"
-            || ext == "woff2"
-            || stem.ends_with(".min")
-        {
-            return true;
-        }
-    }
-
-    let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    if ignore_globset.is_match(path) || ignore_globset.is_match(Path::new(file_name)) {
-        return true;
-    }
-
-    false
-}
-
-fn spinner_style() -> ProgressStyle {
-    ProgressStyle::with_template("{spinner:.green.bold} {msg}")
-        .unwrap()
-        .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-}
-
-fn progress_style() -> ProgressStyle {
-    ProgressStyle::with_template("{spinner:.green.bold} [{pos}/{len}] {msg}")
-        .unwrap()
-        .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])
-}
-
-const SHIMMER_INTERVAL_MS: u64 = 80;
-
-/// Spawns a background thread that applies the shimmer effect to `prefix` at a fixed rate,
-/// while appending `suffix` unchanged. Callers should set `done` and join the handle before
-/// calling `pb.finish_and_clear()`.
-fn spawn_shimmer(
-    pb: ProgressBar,
-    prefix: String,
-    initial_suffix: String,
-) -> (Arc<Mutex<String>>, Arc<AtomicBool>, JoinHandle<()>) {
-    let suffix = Arc::new(Mutex::new(initial_suffix));
-    let done = Arc::new(AtomicBool::new(false));
-    let pb_clone = pb.clone();
-    let suffix_clone = Arc::clone(&suffix);
-    let done_clone = Arc::clone(&done);
-
-    let handle = thread::spawn(move || {
-        let mut tick: u64 = 0;
-        while !done_clone.load(Ordering::Relaxed) {
-            if let Ok(s) = suffix_clone.lock() {
-                let rendered = format!("{}{}", shimmer::apply_shimmer(&prefix, tick), s.as_str());
-                pb_clone.set_message(rendered);
-            }
-            tick = tick.wrapping_add(1);
-            thread::sleep(Duration::from_millis(SHIMMER_INTERVAL_MS));
-        }
-    });
-
-    (suffix, done, handle)
-}
 
 fn main() {
-    let args = Args::parse();
-    let config = config::Config::load();
-    let minify = args.minify || config.default_minify;
-    let ignore_globset = build_ignore_globset(&config.global_ignore);
-
-    let running = Arc::new(AtomicBool::new(true));
-    let r = running.clone();
-    ctrlc::set_handler(move || {
-        println!(
-            "{}",
-            "\n[!] Received Ctrl+C. Halting immediately...".yellow()
-        );
-        r.store(false, Ordering::SeqCst);
-        std::process::exit(1);
-    })
-    .expect("Error setting Ctrl-C handler");
-
-    let max_output_bytes = config
-        .max_output_mb
-        .map(|m| m * 1024 * 1024)
-        .unwrap_or(100 * 1024 * 1024);
-
-    let mut final_output = String::with_capacity(2 * 1024 * 1024);
-    final_output.push_str("# Codebase Context\n\n");
-
-    let target_files: Vec<PathBuf>;
-
-    if args.diff {
-        println!("{}", "[+] Mode: Git Diff (Only changed files)".green());
-        target_files = get_git_modified_files();
-    } else if args.trace && args.path.is_file() {
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(spinner_style());
-        pb.enable_steady_tick(Duration::from_millis(100));
-
-        let (trace_suffix, trace_done, trace_handle) = spawn_shimmer(
-            pb.clone(),
-            format!("Tracing dependencies for {}", args.path.display()),
-            String::new(),
-        );
-
-        let mut trace_count = 0;
-        target_files = tracer::trace_dependencies(&args.path, move |p| {
-            trace_count += 1;
-            if trace_count % 10 == 0 {
-                if let Ok(mut s) = trace_suffix.lock() {
-                    *s = format!("\x1b[38;2;85;85;85m -> {}\x1b[0m", p.display());
-                }
-            }
-        });
-
-        trace_done.store(true, Ordering::Relaxed);
-        trace_handle.join().unwrap();
-        pb.finish_and_clear();
-        println!(
-            "{} Smart AST Trace ({})",
-            "[+]".green(),
-            args.path.display().to_string().cyan()
-        );
-    } else {
-        let mut walker = WalkBuilder::new(&args.path);
-        walker.hidden(false);
-        if !config.global_ignore.is_empty() {
-            walker.overrides(build_ignore_overrides(&config.global_ignore, &args.path));
-        }
-        let pb = ProgressBar::new_spinner();
-        pb.set_style(spinner_style());
-        pb.enable_steady_tick(Duration::from_millis(100));
-
-        let (scan_suffix, scan_done, scan_handle) = spawn_shimmer(
-            pb.clone(),
-            format!("Scanning directory {}", args.path.display()),
-            String::new(),
-        );
-
-        let mut files = Vec::new();
-        let mut scan_count = 0;
-        for entry in walker.build().flatten() {
-            if !running.load(Ordering::SeqCst) {
-                println!("{}", "[!] Aborted by user.".yellow());
-                break;
-            }
-
-            if entry.file_type().is_some_and(|ft| ft.is_file()) {
-                let path = entry.path();
-                if path.components().any(|c| {
-                    let name = c.as_os_str().to_string_lossy();
-                    name == ".git" || name == "target"
-                }) {
-                    continue;
-                }
-                files.push(path.to_path_buf());
-                scan_count += 1;
-                if scan_count % 500 == 0 {
-                    if let Ok(mut s) = scan_suffix.lock() {
-                        *s = format!("\x1b[38;2;85;85;85m -> {}\x1b[0m", path.display());
-                    }
-                }
-            }
-        }
-        scan_done.store(true, Ordering::Relaxed);
-        scan_handle.join().unwrap();
-        target_files = files;
-        pb.finish_and_clear();
-        println!("{} Directory Scan (Respecting .gitignore)", "[+]".green());
+    let no_user_args = std::env::args_os().nth(1).is_none();
+    let mut parsed = Args::parse();
+    if should_launch_tui_by_default(
+        no_user_args,
+        io::stdin().is_terminal(),
+        io::stdout().is_terminal(),
+    ) {
+        parsed.tui = true;
     }
-
-    if target_files.is_empty() {
-        println!("{}", "[!] No files found to pack.".yellow());
+    if let Some(shell) = parsed.completions {
+        Args::write_completions(shell);
         return;
     }
-
-    let (processable, skipped): (Vec<_>, Vec<_>) = target_files
-        .into_iter()
-        .partition(|p| !should_skip_file(p, args.no_limit, &ignore_globset));
-
-    if args.dry_run {
-        println!("{} {} files selected:", "[+]".green(), processable.len());
-        for path in &processable {
-            println!("  {}", path.display());
+    let mut args = parsed.normalized();
+    let cwd = match std::env::current_dir() {
+        Ok(cwd) => cwd,
+        Err(e) => {
+            eprintln!("[cxt] failed to read current directory: {}", e);
+            std::process::exit(2);
         }
-        println!(
-            "{} {} files skipped by safety limits.",
-            "[+]".green(),
-            skipped.len()
-        );
-        return;
-    }
+    };
 
-    if processable.is_empty() {
-        println!(
-            "{}",
-            "[!] All files were skipped by safety limits.".yellow()
-        );
-        return;
-    }
-
-    let pb = ProgressBar::new(processable.len() as u64);
-    pb.set_style(progress_style());
-
-    let (pack_suffix, pack_done, pack_handle) =
-        spawn_shimmer(pb.clone(), "Packing".to_string(), String::new());
-
-    let mut cumulative_size = final_output.len();
-    let mut file_count = 0;
-    let mut limit_reached = false;
-
-    for path in processable {
-        if file_count % 50 == 0 {
-            if let Ok(mut s) = pack_suffix.lock() {
-                *s = format!("\x1b[38;2;85;85;85m {}\x1b[0m", path.display());
+    let mut reviewed_result: Option<EngineResult> = None;
+    if args.tui {
+        match tui::run(&args, &cwd) {
+            Ok(Some(selection)) => {
+                args = selection.args;
+                reviewed_result = Some(selection.result);
+            }
+            Ok(None) => return,
+            Err(message) => {
+                eprintln!("[cxt] TUI error: {}", message);
+                std::process::exit(2);
             }
         }
-
-        if !running.load(Ordering::SeqCst) {
-            println!("{}", "[!] Aborted by user.".yellow());
-            break;
-        }
-
-        if is_binary_file(&path) {
-            pb.inc(1);
-            continue;
-        }
-
-        if let Ok(content) = fs::read_to_string(&path) {
-            let ext = path
-                .extension()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string();
-            let lang = get_language(&ext);
-            let mut processed = redact_secrets(&content);
-            if minify {
-                if let Some(lang) = lang {
-                    processed = strip_comments(&processed, lang);
-                }
-                processed = minify_code(&processed);
-            }
-
-            if cumulative_size + processed.len() > max_output_bytes {
-                println!(
-                    "{}",
-                    format!(
-                        "[!] Reached {}MB output limit. Stopping early.",
-                        max_output_bytes / (1024 * 1024)
-                    )
-                    .yellow()
-                );
-                limit_reached = true;
-                break;
-            }
-            cumulative_size += processed.len();
-
-            final_output.push_str(&format!(
-                "### File: `{}`\n```{}\n{}\n```\n\n",
-                path.display(),
-                ext,
-                processed
-            ));
-            file_count += 1;
-        }
-
-        pb.inc(1);
     }
 
-    pack_done.store(true, Ordering::Relaxed);
-    pack_handle.join().unwrap();
+    let result = match reviewed_result {
+        Some(result) => Ok(result),
+        None => match prepare_with_progress(&args, &cwd) {
+            Ok(selection) => pack_with_progress(&args, &cwd, selection),
+            Err(error) => Err(error),
+        },
+    };
 
-    if limit_reached {
-        final_output.push_str("\n*Output truncated: reached configured output size limit.*\n");
+    match result {
+        Ok(result) => {
+            if args.dry_run {
+                print_dry_run(&result);
+                return;
+            }
+            if let Err(e) = deliver(&args, &result) {
+                eprintln!("[cxt] {}", e);
+                std::process::exit(3);
+            }
+            print_summary(&args, &result);
+        }
+        Err(EngineError::Secret(message)) => {
+            eprintln!("[cxt] {}", message);
+            std::process::exit(4);
+        }
+        Err(EngineError::General(message)) => {
+            eprintln!("[cxt] {}", message);
+            std::process::exit(2);
+        }
+    }
+}
+
+fn should_launch_tui_by_default(
+    no_user_args: bool,
+    stdin_is_terminal: bool,
+    stdout_is_terminal: bool,
+) -> bool {
+    no_user_args && stdin_is_terminal && stdout_is_terminal
+}
+
+fn progress_enabled(args: &Args) -> bool {
+    io::stderr().is_terminal() && !args.ci
+}
+
+fn prepare_with_progress(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError> {
+    if !progress_enabled(args) {
+        return engine::prepare(args, cwd);
     }
 
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::with_template("{spinner:.cyan} {msg}")
+            .unwrap()
+            .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
+    );
+    pb.enable_steady_tick(Duration::from_millis(80));
+    pb.set_message("Scanning project, applying filters and building context candidates…");
+    let result = engine::prepare(args, cwd);
     pb.finish_and_clear();
+    result
+}
 
-    let token_estimate = count_tokens(&final_output);
-
-    println!(
-        "{} Packed {} files ({} skipped by limits).",
-        "[+]".green(),
-        file_count.to_string().cyan(),
-        skipped.len().to_string().cyan()
-    );
-    println!(
-        "{} Estimated Size: ~{} tokens",
-        "[+]".green(),
-        token_estimate.to_string().cyan()
-    );
-    if token_estimate > 100_000 {
-        println!(
-            "{}",
-            "[!] Warning: Large payload. May exceed standard LLM context windows.".yellow()
-        );
+fn pack_with_progress(
+    args: &Args,
+    cwd: &Path,
+    prepared: SelectionPreview,
+) -> Result<EngineResult, EngineError> {
+    if !progress_enabled(args) {
+        return engine::run_prepared(args, cwd, prepared);
     }
 
-    if let Some(output_path) = args.output {
-        if let Err(e) = fs::write(&output_path, &final_output) {
-            println!(
-                "{} Failed to write output to {}: {}",
-                "[!]".red(),
-                output_path.display().to_string().cyan(),
-                e
-            );
-        } else {
-            println!(
-                "{} SUCCESS: Context written to {}",
-                "[+]".green(),
-                output_path.display().to_string().cyan()
-            );
-        }
+    let total = prepared.candidates.len();
+    let root = prepared.root.clone();
+    let pb = ProgressBar::new(total as u64);
+    pb.set_style(
+        ProgressStyle::with_template("{spinner:.cyan} [{bar:28.cyan/blue}] {pos:>4}/{len:4} {msg}")
+            .unwrap()
+            .progress_chars("━━╸"),
+    );
+    pb.enable_steady_tick(Duration::from_millis(80));
+    pb.set_message("Packing context…");
+
+    let result =
+        engine::run_prepared_with_progress(args, cwd, prepared, |index, count, path, bytes| {
+            pb.set_length(count as u64);
+            pb.set_position(index.saturating_sub(1) as u64);
+            let display = path.strip_prefix(&root).unwrap_or(path);
+            let large = if bytes >= 256 * 1024 {
+                " • large"
+            } else {
+                ""
+            };
+            pb.set_message(format!(
+                "{} • {}{}",
+                compact_path(display, 62),
+                human_bytes(bytes),
+                large
+            ));
+        });
+    pb.set_position(total as u64);
+    pb.finish_and_clear();
+    result
+}
+
+fn compact_path(path: &Path, max_chars: usize) -> String {
+    let text = path.display().to_string();
+    let count = text.chars().count();
+    if count <= max_chars {
+        return text;
+    }
+    let tail: String = text
+        .chars()
+        .rev()
+        .take(max_chars.saturating_sub(1))
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect();
+    format!("…{}", tail)
+}
+
+fn human_bytes(bytes: u64) -> String {
+    if bytes >= 1024 * 1024 {
+        format!("{:.1} MiB", bytes as f64 / (1024.0 * 1024.0))
+    } else if bytes >= 1024 {
+        format!("{:.1} KiB", bytes as f64 / 1024.0)
     } else {
-        match Clipboard::new() {
-            Ok(mut ctx) => {
-                if let Err(e) = ctx.set_text(final_output.clone()) {
-                    println!(
-                        "{} Failed to write to clipboard: {}. Writing fallback file...",
-                        "[!]".yellow(),
-                        e
-                    );
-                    if let Err(e2) = fs::write("cxt-output.md", &final_output) {
-                        println!("{} Also failed to write cxt-output.md: {}", "[!]".red(), e2);
-                    } else {
-                        println!(
-                            "{} SUCCESS: Context written to cxt-output.md",
-                            "[+]".green()
-                        );
-                    }
-                } else {
-                    println!(
-                        "{} SUCCESS: Context safely copied to clipboard!",
-                        "[+]".green()
-                    );
-                }
-            }
-            Err(e) => {
-                println!(
-                    "{} Clipboard error: {}. Writing context to cxt-output.md instead...",
-                    "[!]".yellow(),
-                    e
-                );
-                if let Err(e2) = fs::write("cxt-output.md", &final_output) {
-                    println!("{} Failed to write cxt-output.md: {}", "[!]".red(), e2);
-                } else {
-                    println!(
-                        "{} SUCCESS: Context written to cxt-output.md",
-                        "[+]".green()
-                    );
-                }
-            }
+        format!("{} B", bytes)
+    }
+}
+
+fn deliver(args: &Args, result: &EngineResult) -> Result<(), String> {
+    if let Some(path) = &args.output {
+        write_file(path, args.compression, result.rendered.as_bytes())?;
+        return Ok(());
+    }
+
+    if args.stdout || args.ci {
+        let mut stdout = io::stdout().lock();
+        stdout
+            .write_all(result.rendered.as_bytes())
+            .map_err(|e| e.to_string())?;
+        if !result.rendered.ends_with('\n') {
+            stdout.write_all(b"\n").map_err(|e| e.to_string())?;
         }
+        return Ok(());
+    }
+
+    match Clipboard::new().and_then(|mut c| c.set_text(result.rendered.clone())) {
+        Ok(_) => Ok(()),
+        Err(error) => {
+            let fallback = match result.format {
+                cxt_core::output::OutputFormat::Markdown => "cxt-output.md",
+                cxt_core::output::OutputFormat::Xml => "cxt-output.xml",
+                cxt_core::output::OutputFormat::Json => "cxt-output.json",
+            };
+            fs::write(fallback, &result.rendered).map_err(|write_error| {
+                format!(
+                    "clipboard failed ({}), and fallback {} also failed: {}",
+                    error, fallback, write_error
+                )
+            })?;
+            eprintln!(
+                "[cxt] clipboard unavailable; wrote context to {} instead",
+                fallback
+            );
+            Ok(())
+        }
+    }
+}
+
+fn write_file(path: &Path, compression: Compression, bytes: &[u8]) -> Result<(), String> {
+    match compression {
+        Compression::None => fs::write(path, bytes).map_err(|e| e.to_string()),
+        Compression::Gzip => {
+            let file = fs::File::create(path).map_err(|e| e.to_string())?;
+            let mut encoder = GzEncoder::new(file, GzipLevel::default());
+            encoder.write_all(bytes).map_err(|e| e.to_string())?;
+            encoder.finish().map_err(|e| e.to_string())?;
+            Ok(())
+        }
+        Compression::Zstd => {
+            let compressed =
+                zstd::stream::encode_all(Cursor::new(bytes), 3).map_err(|e| e.to_string())?;
+            fs::write(path, compressed).map_err(|e| e.to_string())
+        }
+    }
+}
+
+fn print_dry_run(result: &EngineResult) {
+    println!(
+        "[cxt] {} files selected (mode: {}, root: {})",
+        result.packed_files.len(),
+        result.selection_mode,
+        result.root.display()
+    );
+    for file in &result.packed_files {
+        let path = file.path.strip_prefix(&result.root).unwrap_or(&file.path);
+        println!(
+            "  {}  ~{} tokens  score={}  [{}]",
+            path.display(),
+            file.tokens,
+            file.score,
+            file.reasons.join(", ")
+        );
+    }
+    if result.budget_skipped > 0 {
+        println!(
+            "[cxt] {} additional files skipped by token budget",
+            result.budget_skipped
+        );
+    }
+    print_skipped_details(result);
+}
+
+fn print_skipped_details(result: &EngineResult) {
+    if result.skipped_details.is_empty() {
+        return;
+    }
+    eprintln!(
+        "[cxt] {} unreadable/binary/walk-error item(s) were skipped:",
+        result.skipped_details.len()
+    );
+    for item in result.skipped_details.iter().take(8) {
+        match &item.path {
+            Some(path) => {
+                let display = path.strip_prefix(&result.root).unwrap_or(path);
+                eprintln!("  - {}: {}", display.display(), item.reason);
+            }
+            None => eprintln!("  - {}", item.reason),
+        }
+    }
+    if result.skipped_details.len() > 8 {
+        eprintln!(
+            "  … and {} more (open the TUI and press ! to inspect skipped items)",
+            result.skipped_details.len() - 8
+        );
+    }
+}
+
+fn print_summary(args: &Args, result: &EngineResult) {
+    let summary = format!(
+        "[cxt] packed {} files, ~{} tokens, {} redactions, {} skipped ({} by budget)",
+        result.packed_files.len(),
+        result.estimated_tokens,
+        result.redactions,
+        result.skipped_files,
+        result.budget_skipped
+    );
+
+    if args.stdout || (args.ci && args.output.is_none()) {
+        eprintln!("{}", summary);
+    } else {
+        println!("{}", summary);
+        if let Some(path) = &args.output {
+            println!("[cxt] wrote {}", path.display());
+        } else {
+            println!("[cxt] copied context to clipboard");
+        }
+    }
+    print_skipped_details(result);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_launch_tui_by_default;
+
+    #[test]
+    fn bare_interactive_invocation_defaults_to_tui() {
+        assert!(should_launch_tui_by_default(true, true, true));
+    }
+
+    #[test]
+    fn explicit_or_noninteractive_invocation_keeps_cli_mode() {
+        assert!(!should_launch_tui_by_default(false, true, true));
+        assert!(!should_launch_tui_by_default(true, false, true));
+        assert!(!should_launch_tui_by_default(true, true, false));
     }
 }

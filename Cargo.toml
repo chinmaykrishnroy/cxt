@@ -1,9 +1,22 @@
 [package]
-name = "cxt"
-version = "0.1.0"
+name = "cxt-ai"
+version = "0.4.0"
 edition = "2021"
-description = "Blazing fast, AST-aware context packer for LLMs"
+description = "Fast, code-aware context engine for coding agents and LLMs"
 authors = ["Chinmay Krishn Roy"]
+license = "MIT"
+repository = "https://github.com/chinmaykrishnroy/cxt"
+readme = "README.md"
+keywords = ["llm", "context", "code", "cli", "ai"]
+categories = ["command-line-utilities", "development-tools"]
+
+[lib]
+name = "cxt_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cxt"
+path = "src/main.rs"
 
 [profile.release]
 strip = "symbols"
@@ -12,27 +25,31 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-clap = { version = "4.4", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
+clap_complete = "4.5"
 ignore = "0.4"
-regex = "1.10"
-arboard = "3.3"
+regex = "1.11"
+arboard = "3.4"
 tree-sitter = "0.20"
 tree-sitter-python = "0.20"
 tree-sitter-javascript = "0.20"
 tree-sitter-typescript = "0.20"
 tree-sitter-rust = "0.20"
+tree-sitter-go = "0.20"
+tree-sitter-c = "0.20"
+tree-sitter-cpp = "0.20"
+tree-sitter-java = "0.20"
+tree-sitter-c-sharp = "0.20"
+tree-sitter-ruby = "0.20"
+tree-sitter-php = "0.20"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-colored = "3.1.1"
-indicatif = "0.18.6"
-directories = "6.0.0"
-toml = "1.1"
+directories = "6.0"
+toml = "0.8"
 globset = "0.4"
-ctrlc = "3.5"
-tree-sitter-go = "0.20.0"
-tree-sitter-c = "0.20.8"
-tree-sitter-cpp = "0.20.5"
-tree-sitter-java = "0.20.2"
-tree-sitter-c-sharp = "0.20.0"
-tree-sitter-ruby = "0.20.1"
-tree-sitter-php = "0.20.0"
+flate2 = "1.0"
+zstd = "0.13"
+sha2 = "0.10"
+ratatui = "0.30.2"
+crossterm = "0.29.0"
+indicatif = "0.18.6"

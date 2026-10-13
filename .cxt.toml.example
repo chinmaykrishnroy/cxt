@@ -1,0 +1,11 @@
+default_minify = true
+model = "gpt-5"
+max_tokens = 60000
+max_output_mb = 100
+secret_policy = "redact"
+format = "markdown"
+path_style = "relative"
+
+include = ["src/**", "tests/**", "*.toml"]
+global_ignore = ["fixtures/**", "generated/**"]
+

@@ -241,6 +241,48 @@ fn extract_imports_from_node(node: Node, source: &[u8], imports: &mut Vec<String
     }
 }
 
+pub fn direct_dependencies(file: &Path) -> Vec<PathBuf> {
+    let ext = file
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let Some(lang) = get_language(&ext) else {
+        return Vec::new();
+    };
+
+    let Ok(content) = fs::read_to_string(file) else {
+        return Vec::new();
+    };
+    let mut parser = TsParser::new();
+    if parser.set_language(lang).is_err() {
+        return Vec::new();
+    }
+    let Some(tree) = parser.parse(&content, None) else {
+        return Vec::new();
+    };
+
+    if ext == "rs" {
+        return crate::rust_graph::dependencies(file, tree.root_node(), content.as_bytes())
+            .into_iter()
+            .map(|path| path.canonicalize().unwrap_or(path))
+            .collect();
+    }
+
+    let mut imports = Vec::new();
+    extract_imports_from_node(tree.root_node(), content.as_bytes(), &mut imports);
+    let base_dir = file.parent().unwrap_or(Path::new(""));
+    let mut resolved = HashSet::new();
+    for import in imports {
+        if let Some(path) = resolve_import_path(base_dir, &import, &ext) {
+            resolved.insert(path.canonicalize().unwrap_or(path));
+        }
+    }
+    let mut paths: Vec<PathBuf> = resolved.into_iter().collect();
+    paths.sort();
+    paths
+}
+
 pub fn trace_dependencies<F>(entry_file: &Path, mut on_discover: F) -> Vec<PathBuf>
 where
     F: FnMut(&Path),
@@ -254,32 +296,12 @@ where
     collected.insert(entry_abs.clone());
     queue.push_back(entry_abs);
 
-    let mut parser = TsParser::new();
-
     while let Some(current_file) = queue.pop_front() {
-        let ext = current_file
-            .extension()
-            .unwrap_or_default()
-            .to_string_lossy();
-        if let Some(lang) = get_language(&ext) {
-            parser.set_language(lang).unwrap();
-
-            if let Ok(content) = fs::read_to_string(&current_file) {
-                if let Some(tree) = parser.parse(&content, None) {
-                    let mut imports = Vec::new();
-                    extract_imports_from_node(tree.root_node(), content.as_bytes(), &mut imports);
-
-                    let base_dir = current_file.parent().unwrap_or(Path::new(""));
-                    for imp in imports {
-                        if let Some(resolved) = resolve_import_path(base_dir, &imp, &ext) {
-                            let canonical = resolved.canonicalize().unwrap_or(resolved);
-                            if collected.insert(canonical.clone()) {
-                                on_discover(&canonical);
-                                queue.push_back(canonical);
-                            }
-                        }
-                    }
-                }
+        for resolved in direct_dependencies(&current_file) {
+            let canonical = resolved.canonicalize().unwrap_or(resolved);
+            if collected.insert(canonical.clone()) {
+                on_discover(&canonical);
+                queue.push_back(canonical);
             }
         }
     }

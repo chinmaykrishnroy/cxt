@@ -37,3 +37,4 @@ pub fn apply_shimmer(text: &str, tick: u64) -> String {
 
     result
 }
+

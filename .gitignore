@@ -1,1 +1,4 @@
 /target
+.cxt/cache/
+cxt-output.*
+.cxt-task*.json

@@ -38,6 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --all-targets
       - run: cargo build --release
 
   quality:
@@ -59,3 +60,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo run -- --help
       - run: cargo run -- . --dry-run
+

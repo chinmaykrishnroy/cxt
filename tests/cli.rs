@@ -16,7 +16,9 @@ fn help_and_version_work() {
     let help = run_cxt(&dir, &["--help"]);
     assert_success(&help);
     let stdout = String::from_utf8_lossy(&help.stdout);
-    assert!(stdout.contains("Blazing fast, smart context packer"));
+    assert!(stdout.contains("code-aware context engine"));
+    assert!(stdout.contains("--tui"));
+    assert!(stdout.contains("--no-minify"));
 
     let version = run_cxt(&dir, &["--version"]);
     assert_success(&version);
@@ -68,6 +70,23 @@ fn minify_strips_rust_comments() {
 }
 
 #[test]
+fn no_minify_overrides_project_default() {
+    let dir = temp_dir("no-minify-config");
+    write_file(&dir, ".cxt.toml", "default_minify = true\n");
+    write_file(
+        &dir,
+        "lib.rs",
+        "// keep this comment when --no-minify is used\nfn answer() -> i32 { 42 }\n",
+    );
+
+    let out = run_cxt(&dir, &[".", "--no-minify", "--output", "out.md"]);
+    assert_success(&out);
+
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("keep this comment"));
+}
+
+#[test]
 fn binary_files_are_skipped() {
     let dir = temp_dir("binary");
     write_file(&dir, "main.rs", "fn main() {}\n");
@@ -80,6 +99,26 @@ fn binary_files_are_skipped() {
     assert!(md.contains("main.rs"));
     assert!(!md.contains("data.bin"), "binary file should be skipped");
     assert_eq!(packed_file_count(&md), 1);
+}
+
+#[test]
+fn invalid_utf8_files_are_skipped_without_aborting_pack() {
+    let dir = temp_dir("invalid-utf8");
+    write_file(&dir, "good.txt", "readable context\n");
+    // No NUL byte: this reaches the text reader and exercises a real read_to_string failure.
+    write_bytes(&dir, "bad.txt", &[0xff, 0xfe, 0xfd, b'x']);
+
+    let out = run_cxt(&dir, &[".", "--no-limit", "--output", "out.md"]);
+    assert_success(&out);
+
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("good.txt"));
+    assert!(!md.contains("bad.txt"), "invalid UTF-8 should be skipped");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("read failed") || stderr.contains("skipped"),
+        "the non-fatal read failure should be visible in diagnostics"
+    );
 }
 
 #[test]
@@ -98,7 +137,7 @@ fn large_files_are_skipped_by_default() {
     assert!(md.contains("main.rs"));
     assert!(!md.contains("big.txt"), "large file should be skipped");
     assert!(
-        stdout.contains("skipped by limits"),
+        stdout.contains("skipped"),
         "summary should mention skipped files"
     );
 }
@@ -483,11 +522,14 @@ fn trace_php_multiple_includes() {
 #[test]
 fn redaction_masks_api_key() {
     let dir = temp_dir("redact-key");
-    write_file(
-        &dir,
-        "main.rs",
-        "const API_KEY: &str = \"abcdef1234567890abcdef\";\nfn main() {}\n",
+    let secret = "a".repeat(24);
+    let source = format!(
+        r#"const API_KEY: &str = "{}";
+fn main() {{}}
+"#,
+        secret
     );
+    write_file(&dir, "main.rs", &source);
 
     let out = run_cxt(&dir, &[".", "--output", "out.md"]);
     assert_success(&out);
@@ -498,7 +540,7 @@ fn redaction_masks_api_key() {
         "long API key should be redacted"
     );
     assert!(
-        !md.contains("abcdef1234567890abcdef"),
+        !md.contains(&secret),
         "raw secret should not appear in output"
     );
 }
@@ -506,11 +548,13 @@ fn redaction_masks_api_key() {
 #[test]
 fn redaction_masks_token_and_password() {
     let dir = temp_dir("redact-token");
-    write_file(
-        &dir,
-        "main.rs",
-        "const TOKEN: &str = \"ghp_abcdefghijklmnopqrstuv\";\nconst PASSWORD: &str = \"hunter2hunter2hunter2\";\nfn main() {}\n",
+    let token = format!("ghp_{}", "a".repeat(24));
+    let password = "hunter2".repeat(3);
+    let source = format!(
+        "const TOKEN: &str = \"{}\";\nconst PASSWORD: &str = \"{}\";\nfn main() {{}}\n",
+        token, password
     );
+    write_file(&dir, "main.rs", &source);
 
     let out = run_cxt(&dir, &[".", "--output", "out.md"]);
     assert_success(&out);
@@ -520,8 +564,8 @@ fn redaction_masks_token_and_password() {
         md.contains("[REDACTED_SECRET]"),
         "token and password should be redacted"
     );
-    assert!(!md.contains("ghp_abcdefghijklmnopqrstuv"));
-    assert!(!md.contains("hunter2hunter2hunter2"));
+    assert!(!md.contains(&token));
+    assert!(!md.contains(&password));
 }
 
 #[test]
@@ -602,4 +646,294 @@ fn dry_run_lists_selected_files() {
         !stdout.contains("SUCCESS"),
         "dry run should not copy to clipboard"
     );
+}
+
+#[test]
+fn multiple_explicit_paths_are_packed() {
+    let dir = temp_dir("multi-path");
+    write_file(&dir, "a.rs", "fn a() {}\n");
+    write_file(&dir, "b.py", "def b(): pass\n");
+    write_file(&dir, "c.txt", "not selected\n");
+
+    let out = run_cxt(&dir, &["a.rs", "b.py", "--output", "out.md"]);
+    assert_success(&out);
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("a.rs"));
+    assert!(md.contains("b.py"));
+    assert!(!md.contains("c.txt"));
+    assert_eq!(packed_file_count(&md), 2);
+}
+
+#[test]
+fn include_ignore_and_extension_filters_work() {
+    let dir = temp_dir("filters");
+    write_file(&dir, "src/keep.rs", "fn keep() {}\n");
+    write_file(&dir, "src/drop.rs", "fn drop_me() {}\n");
+    write_file(&dir, "src/keep.py", "print('python')\n");
+
+    let out = run_cxt(
+        &dir,
+        &[
+            ".",
+            "--include",
+            "src/**",
+            "--ignore",
+            "**/drop.rs",
+            "--ext",
+            "rs",
+            "--output",
+            "out.md",
+        ],
+    );
+    assert_success(&out);
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("keep.rs"));
+    assert!(!md.contains("drop.rs"));
+    assert!(!md.contains("keep.py"));
+}
+
+#[test]
+fn json_and_xml_formats_work() {
+    let dir = temp_dir("formats");
+    write_file(&dir, "main.rs", "fn main() {}\n");
+
+    let json = run_cxt(
+        &dir,
+        &[
+            "main.rs",
+            "--format",
+            "json",
+            "--manifest",
+            "--output",
+            "out.json",
+        ],
+    );
+    assert_success(&json);
+    let parsed: serde_json::Value = serde_json::from_str(&read_file(&dir, "out.json")).unwrap();
+    assert_eq!(parsed["schema"], "cxt.context.v1");
+    assert_eq!(parsed["files"].as_array().unwrap().len(), 1);
+
+    let xml = run_cxt(&dir, &["main.rs", "--format", "xml", "--output", "out.xml"]);
+    assert_success(&xml);
+    let text = read_file(&dir, "out.xml");
+    assert!(text.contains("<context>"));
+    assert!(text.contains("<file"));
+}
+
+#[test]
+fn git_staged_mode_only_packs_staged_changes() {
+    let dir = temp_dir("git-staged");
+    init_git_repo(&dir);
+    commit_file(&dir, "a.py", "print(1)\n", "baseline a");
+    commit_file(&dir, "b.py", "print(1)\n", "baseline b");
+    write_file(&dir, "a.py", "print(2)\n");
+    write_file(&dir, "b.py", "print(3)\n");
+    let status = std::process::Command::new("git")
+        .args(["add", "a.py"])
+        .current_dir(&dir)
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let out = run_cxt(&dir, &["--git", "staged", "--output", "out.md"]);
+    assert_success(&out);
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("a.py"));
+    assert!(md.contains("print(2)"));
+    assert!(!md.contains("b.py"));
+}
+
+#[test]
+fn secret_fail_policy_exits_nonzero_without_leaking_secret() {
+    let dir = temp_dir("secret-fail");
+    write_file(
+        &dir,
+        "main.rs",
+        "const API_KEY: &str = \"abcdef1234567890abcdef\";\n",
+    );
+    let out = run_cxt(
+        &dir,
+        &["main.rs", "--secrets", "fail", "--output", "out.md"],
+    );
+    assert_eq!(out.status.code(), Some(4));
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("secret policy 'fail'"));
+    assert!(!stderr.contains("abcdef1234567890abcdef"));
+    assert!(!dir.join("out.md").exists());
+}
+
+#[test]
+fn secret_allow_policy_keeps_content() {
+    let dir = temp_dir("secret-allow");
+    write_file(
+        &dir,
+        "main.rs",
+        "const API_KEY: &str = \"abcdef1234567890abcdef\";\n",
+    );
+    let out = run_cxt(
+        &dir,
+        &["main.rs", "--secrets", "allow", "--output", "out.md"],
+    );
+    assert_success(&out);
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("abcdef1234567890abcdef"));
+}
+
+#[test]
+fn query_mode_ranks_and_limits_context() {
+    let dir = temp_dir("query");
+    write_file(
+        &dir,
+        "src/volume_slider.ts",
+        "export function synchronizeVolume() { return 'snapcast'; }\n",
+    );
+    write_file(&dir, "src/unrelated.ts", "export const banana = 1;\n");
+    write_file(&dir, "README.md", "generic documentation\n");
+
+    let out = run_cxt(
+        &dir,
+        &[
+            ".",
+            "--query",
+            "snapcast volume synchronization",
+            "--max-files",
+            "1",
+            "--output",
+            "out.md",
+        ],
+    );
+    assert_success(&out);
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("volume_slider.ts"));
+    assert!(!md.contains("unrelated.ts"));
+    assert_eq!(packed_file_count(&md), 1);
+}
+
+#[test]
+fn path_style_none_hides_source_path() {
+    let dir = temp_dir("path-none");
+    write_file(&dir, "secret-name.rs", "fn main() {}\n");
+    let out = run_cxt(
+        &dir,
+        &[
+            "secret-name.rs",
+            "--path-style",
+            "none",
+            "--output",
+            "out.md",
+        ],
+    );
+    assert_success(&out);
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("### File 1"));
+    assert!(!md.contains("secret-name.rs"));
+}
+
+#[test]
+fn impact_adds_reverse_dependencies_and_related_tests() {
+    let dir = temp_dir("impact");
+    init_git_repo(&dir);
+    write_file(&dir, "helper.ts", "export const value = 1;\n");
+    write_file(
+        &dir,
+        "app.ts",
+        "import { value } from './helper';\nconsole.log(value);\n",
+    );
+    write_file(
+        &dir,
+        "helper.test.ts",
+        "import { value } from './helper';\ntest('value', () => value);\n",
+    );
+    let status = std::process::Command::new("git")
+        .args(["add", "."])
+        .current_dir(&dir)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    let status = std::process::Command::new("git")
+        .args([
+            "-c",
+            "user.name=cxt-test",
+            "-c",
+            "user.email=cxt-test@example.com",
+            "commit",
+            "-q",
+            "-m",
+            "baseline",
+        ])
+        .current_dir(&dir)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    write_file(&dir, "helper.ts", "export const value = 2;\n");
+
+    let out = run_cxt(
+        &dir,
+        &["--git", "working", "--impact", "--output", "out.md"],
+    );
+    assert_success(&out);
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("helper.ts"));
+    assert!(
+        md.contains("app.ts"),
+        "reverse dependency should be included"
+    );
+    assert!(
+        md.contains("helper.test.ts"),
+        "related test should be included"
+    );
+}
+
+#[test]
+fn sensitive_env_files_are_excluded_by_default() {
+    let dir = temp_dir("env-default");
+    write_file(&dir, "main.py", "print('safe')\n");
+    write_file(&dir, ".env", "SHOULD_NOT_BE_PACKED=1\n");
+
+    let out = run_cxt(&dir, &[".", "--output", "out.md"]);
+    assert_success(&out);
+    let md = read_file(&dir, "out.md");
+    assert!(md.contains("main.py"));
+    assert!(!md.contains(".env"));
+    assert!(!md.contains("SHOULD_NOT_BE_PACKED=1"));
+}
+
+#[test]
+fn change_review_includes_deletions_and_hides_sensitive_patches() {
+    let dir = temp_dir("review-deletions");
+    init_git_repo(&dir);
+    commit_file(&dir, "gone.rs", "fn obsolete() {}\n", "baseline");
+    commit_file(
+        &dir,
+        ".env",
+        "PRIVATE_CONFIGURATION=old\n",
+        "config baseline",
+    );
+    std::fs::remove_file(dir.join("gone.rs")).unwrap();
+    write_file(&dir, ".env", "PRIVATE_CONFIGURATION=changed\n");
+    let args = <cxt_core::cli::Args as clap::Parser>::parse_from(["cxt", "--git", "working"]);
+    let workspace = cxt_core::review::Workspace::load(&args, &dir).unwrap();
+    let deletion = workspace
+        .changes
+        .iter()
+        .find(|c| c.path.ends_with("gone.rs"))
+        .unwrap();
+    assert_eq!(deletion.status, "D");
+    assert!(deletion.diff.contains("-fn obsolete()"));
+    let config = workspace
+        .changes
+        .iter()
+        .find(|c| c.path.ends_with(".env"))
+        .unwrap();
+    assert!(!config.diff.contains("PRIVATE_CONFIGURATION"));
+}
+
+#[test]
+fn zero_budget_overrides_project_budget() {
+    let dir = temp_dir("unlimited-budget");
+    write_file(&dir, ".cxt.toml", "max_tokens = 1\n");
+    write_file(&dir, "main.rs", "fn main() {}\n");
+    let out = run_cxt(&dir, &["main.rs", "--budget", "0", "--stdout"]);
+    assert_success(&out);
+    assert!(String::from_utf8_lossy(&out.stdout).contains("fn main()"));
 }

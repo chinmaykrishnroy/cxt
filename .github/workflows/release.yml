@@ -73,12 +73,14 @@ jobs:
             exe="${exe}.exe"
             cp "$exe" "dist/cxt-${{ matrix.target }}.exe"
           elif [ "${{ runner.os }}" = "macOS" ]; then
-            cp "$exe" "dist/cxt"
-            chmod +x "dist/cxt"
+            cp "$exe" "dist/cxt-${{ matrix.target }}"
+            chmod +x "dist/cxt-${{ matrix.target }}"
+            tar -czf "dist/cxt-${{ matrix.target }}.tar.gz" -C dist "cxt-${{ matrix.target }}"
             mkdir -p "dist/cxt-macos"
-            mv "dist/cxt" "dist/cxt-macos/cxt"
+            cp "$exe" "dist/cxt-macos/cxt"
+            chmod +x "dist/cxt-macos/cxt"
             hdiutil create -volname cxt -srcfolder "dist/cxt-macos" -ov -format UDZO "dist/cxt-${{ matrix.target }}.dmg"
-            rm -rf "dist/cxt-macos"
+            rm -rf "dist/cxt-macos" "dist/cxt-${{ matrix.target }}"
           else
             cp "$exe" "dist/cxt-${{ matrix.target }}"
             tar -czf "dist/cxt-${{ matrix.target }}.tar.gz" -C dist "cxt-${{ matrix.target }}"
@@ -132,3 +134,4 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+

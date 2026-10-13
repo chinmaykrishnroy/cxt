@@ -116,6 +116,7 @@ fn extension_candidates(extension: &str) -> &'static [&'static str] {
         "cs" => &["cs"],
         "rb" => &["rb"],
         "php" => &["php"],
+        "rs" => &["rs"],
         "c" | "h" => &["c", "h"],
         "cpp" | "hpp" | "cc" | "cxx" => &["cpp", "hpp", "cc", "cxx"],
         _ => &["ts", "tsx", "js", "jsx"], // Default TS/JS
