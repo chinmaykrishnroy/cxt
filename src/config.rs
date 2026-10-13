@@ -23,6 +23,10 @@ pub struct Config {
     pub format: Option<String>,
     #[serde(default)]
     pub path_style: Option<String>,
+    pub scan_max_entries: Option<usize>,
+    pub scan_max_mb: Option<u64>,
+    pub scan_max_depth: Option<usize>,
+    pub scan_timeout: Option<u64>,
 }
 
 impl Config {
@@ -64,6 +68,18 @@ impl Config {
         }
         if other.path_style.is_some() {
             self.path_style = other.path_style;
+        }
+        if other.scan_max_entries.is_some() {
+            self.scan_max_entries = other.scan_max_entries;
+        }
+        if other.scan_max_mb.is_some() {
+            self.scan_max_mb = other.scan_max_mb;
+        }
+        if other.scan_max_depth.is_some() {
+            self.scan_max_depth = other.scan_max_depth;
+        }
+        if other.scan_timeout.is_some() {
+            self.scan_timeout = other.scan_timeout;
         }
         self.global_ignore.extend(other.global_ignore);
         self.include.extend(other.include);

@@ -11,6 +11,16 @@ pub struct Change {
 
 /// Review actual patches, including deletions. Packing still uses checkout files.
 pub fn changes(root: &Path, mode: &str) -> Result<Vec<Change>, String> {
+    changes_with_limits(root, mode, crate::scan::ScanLimits::default())
+}
+
+pub fn changes_with_limits(
+    root: &Path,
+    mode: &str,
+    limits: crate::scan::ScanLimits,
+) -> Result<Vec<Change>, String> {
+    limits.guard(root)?;
+    let mut budget = crate::scan::ScanBudget::new(limits);
     let mut paths = std::collections::BTreeMap::new();
     let mut comparisons: Vec<Vec<&str>> = Vec::new();
     match mode {
@@ -28,17 +38,25 @@ pub fn changes(root: &Path, mode: &str) -> Result<Vec<Change>, String> {
         args.extend(comparison.iter().copied());
         args.push("--");
         let fields = run_paths(root, &args)?;
+        budget.check_time()?;
         for pair in fields.chunks_exact(2) {
+            if !paths.contains_key(&root.join(&pair[1])) {
+                budget.visit(0)?;
+            }
             paths.insert(root.join(&pair[1]), pair[0].to_string_lossy().to_string());
         }
     }
     if matches!(mode, "working" | "diff" | "untracked") {
         for path in run_paths(root, &["ls-files", "--others", "--exclude-standard", "-z"])? {
+            if !paths.contains_key(&root.join(&path)) {
+                budget.visit(0)?;
+            }
             paths.insert(root.join(path), "??".to_string());
         }
     }
     let mut result = Vec::new();
     for (path, status) in paths {
+        budget.check_time()?;
         let relative = path.strip_prefix(root).unwrap_or(&path);
         let mut patches = Vec::new();
         if status == "??" {
@@ -60,6 +78,7 @@ pub fn changes(root: &Path, mode: &str) -> Result<Vec<Change>, String> {
                     .arg(relative)
                     .current_dir(root);
                 let output = command.output().map_err(|e| e.to_string())?;
+                budget.account_bytes(output.stdout.len() as u64)?;
                 if !output.status.success() {
                     return Err(String::from_utf8_lossy(&output.stderr).into_owned());
                 }
@@ -74,6 +93,7 @@ pub fn changes(root: &Path, mode: &str) -> Result<Vec<Change>, String> {
             diff: patches.join("\n"),
         });
     }
+    budget.check_time()?;
     Ok(result)
 }
 

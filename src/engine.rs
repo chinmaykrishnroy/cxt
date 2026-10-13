@@ -9,7 +9,7 @@ use crate::query;
 use crate::security::{self, SecretPolicy};
 use crate::selection::{self, Candidate};
 use crate::token::TokenCounter;
-use crate::tracer::{get_language, trace_dependencies};
+use crate::tracer::{get_language, trace_dependencies_checked};
 use crate::utils::{probe_file, FileProbe};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -205,10 +205,21 @@ pub fn prepare(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError>
     let mut skipped_files = original_count
         .saturating_sub(selection.candidates.len())
         .saturating_add(skipped_details.len());
+    let mut scan_budget =
+        crate::scan::ScanBudget::new(crate::scan::ScanLimits::for_args(args, cwd));
+    for candidate in &selection.candidates {
+        scan_budget
+            .read_file(&candidate.path)
+            .map_err(EngineError::General)?;
+    }
 
     if let Some(q) = &args.query {
         let before_rank = selection.candidates.len();
-        selection.candidates = query::rank(selection.candidates, q, &selection.root);
+        selection.candidates =
+            query::rank_checked(selection.candidates, q, &selection.root, || {
+                scan_budget.check_time()
+            })
+            .map_err(EngineError::General)?;
         skipped_files += before_rank.saturating_sub(selection.candidates.len());
         selection.mode = "query".to_string();
         if selection.candidates.is_empty() {
@@ -217,9 +228,22 @@ pub fn prepare(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError>
                 q
             )));
         }
-        expand_query_dependencies(&mut selection.candidates, &filter, &selection.root);
+        scan_budget.check_time().map_err(EngineError::General)?;
+        expand_query_dependencies(
+            &mut selection.candidates,
+            &filter,
+            &selection.root,
+            &mut scan_budget,
+        )
+        .map_err(EngineError::General)?;
     } else if args.trace {
-        expand_trace(&mut selection.candidates, &filter, &selection.root);
+        expand_trace(
+            &mut selection.candidates,
+            &filter,
+            &selection.root,
+            &mut scan_budget,
+        )
+        .map_err(EngineError::General)?;
         selection.mode = format!("{}+trace", selection.mode);
     }
 
@@ -229,18 +253,35 @@ pub fn prepare(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError>
             .iter()
             .map(|c| c.path.clone())
             .collect();
-        let expanded = impact::expand(&selection.root, &seeds);
+        let expanded =
+            impact::expand(&selection.root, &seeds, args, cwd).map_err(EngineError::General)?;
+        skipped_files += expanded.warnings.len();
+        skipped_details.extend(
+            expanded
+                .warnings
+                .into_iter()
+                .map(|reason| SkippedItem { path: None, reason }),
+        );
         merge_candidates(
             &mut selection.candidates,
-            expanded.into_iter().filter_map(|(path, reason)| {
-                (!filter.should_skip(&path)).then(|| {
-                    let mut c = Candidate::new(path, reason);
-                    c.score = 10;
-                    c
-                })
-            }),
+            expanded
+                .candidates
+                .into_iter()
+                .filter_map(|(path, reason)| {
+                    (!filter.should_skip(&path)).then(|| {
+                        let mut c = Candidate::new(path, reason);
+                        c.score = 10;
+                        c
+                    })
+                }),
         );
         selection.mode = format!("{}+impact", selection.mode);
+    }
+
+    for candidate in &selection.candidates {
+        scan_budget
+            .read_file(&candidate.path)
+            .map_err(EngineError::General)?;
     }
 
     // Do this after trace/query/impact expansion so the TUI never fills with
@@ -267,6 +308,7 @@ pub fn prepare(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError>
             }
         });
     skipped_files += before_probe.saturating_sub(selection.candidates.len());
+    scan_budget.check_time().map_err(EngineError::General)?;
 
     if args.query.is_some() {
         selection
@@ -338,7 +380,11 @@ where
     let mut prepared = prepared;
     let mut snapshots = Vec::new();
     let snapshot_options = SnapshotOptions::for_args(args, cwd);
+    let mut budget = crate::scan::ScanBudget::new(crate::scan::ScanLimits::for_args(args, cwd));
     for (index, candidate) in prepared.candidates.iter().enumerate() {
+        budget
+            .read_file(&candidate.path)
+            .map_err(EngineError::General)?;
         let bytes = fs::metadata(&candidate.path).map(|m| m.len()).unwrap_or(0);
         on_file(index + 1, prepared.candidates.len(), &candidate.path, bytes);
         match snapshot_file_with_options(candidate, &snapshot_options) {
@@ -352,6 +398,7 @@ where
             }
         }
     }
+    budget.check_time().map_err(EngineError::General)?;
     run_snapshots(args, cwd, prepared, snapshots)
 }
 
@@ -534,7 +581,12 @@ pub fn run_snapshots(
     })
 }
 
-fn expand_query_dependencies(candidates: &mut Vec<Candidate>, filter: &FileFilter, root: &Path) {
+fn expand_query_dependencies(
+    candidates: &mut Vec<Candidate>,
+    filter: &FileFilter,
+    root: &Path,
+    budget: &mut crate::scan::ScanBudget,
+) -> Result<(), String> {
     let seeds: Vec<Candidate> = candidates.iter().take(8).cloned().collect();
     let mut additions = Vec::new();
     for seed in seeds {
@@ -544,7 +596,20 @@ fn expand_query_dependencies(candidates: &mut Vec<Candidate>, filter: &FileFilte
             .unwrap_or(&seed.path)
             .display()
             .to_string();
-        for path in trace_dependencies(&seed.path, |_| {}).into_iter().take(41) {
+        for path in trace_dependencies_checked(
+            &seed.path,
+            |_| {},
+            |path| {
+                if filter.should_skip(path) {
+                    return Ok(false);
+                }
+                budget.read_file(path)?;
+                Ok(true)
+            },
+        )?
+        .into_iter()
+        .take(41)
+        {
             if same_path(&path, &seed.path) || filter.should_skip(&path) {
                 continue;
             }
@@ -554,9 +619,15 @@ fn expand_query_dependencies(candidates: &mut Vec<Candidate>, filter: &FileFilte
         }
     }
     merge_candidates(candidates, additions);
+    Ok(())
 }
 
-fn expand_trace(candidates: &mut Vec<Candidate>, filter: &FileFilter, root: &Path) {
+fn expand_trace(
+    candidates: &mut Vec<Candidate>,
+    filter: &FileFilter,
+    root: &Path,
+    budget: &mut crate::scan::ScanBudget,
+) -> Result<(), String> {
     let seeds: Vec<Candidate> = candidates
         .iter()
         .filter(|c| {
@@ -573,7 +644,17 @@ fn expand_trace(candidates: &mut Vec<Candidate>, filter: &FileFilter, root: &Pat
             .unwrap_or(&seed.path)
             .display()
             .to_string();
-        for path in trace_dependencies(&seed.path, |_| {}) {
+        for path in trace_dependencies_checked(
+            &seed.path,
+            |_| {},
+            |path| {
+                if filter.should_skip(path) {
+                    return Ok(false);
+                }
+                budget.read_file(path)?;
+                Ok(true)
+            },
+        )? {
             if same_path(&path, &seed.path) || filter.should_skip(&path) {
                 continue;
             }
@@ -584,6 +665,7 @@ fn expand_trace(candidates: &mut Vec<Candidate>, filter: &FileFilter, root: &Pat
         }
     }
     merge_candidates(candidates, additions);
+    Ok(())
 }
 
 fn merge_candidates<I>(candidates: &mut Vec<Candidate>, additions: I)

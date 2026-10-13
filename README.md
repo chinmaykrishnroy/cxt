@@ -6,6 +6,8 @@
 
 `cxt` is a local-first context engine for ChatGPT, Codex, Claude, Cursor and other coding assistants. The executable remains `cxt`; the crates.io package is named `cxt-ai` to avoid package-name collisions.
 
+`cxt` is short for **context**. Start with the examples below, or read the [complete user guide and CLI reference](docs/CLI_REFERENCE.md) for every flag, default, configuration key and TUI workflow. `cxt -h` lists all options and examples; `cxt --help` expands descriptions.
+
 ## What changed in 0.4
 
 **Review changes, explore dependencies, and inspect the exact context before sharing it.** cxt now provides a terminal workspace with Git patches, import relationships, related-test suggestions, pinned files, final budget exclusions, and saved tasks. Source previews and exports share the same core transformation pipeline. Selection stays local and deterministic.
@@ -34,10 +36,11 @@ Markdown / XML / JSON -> clipboard / stdout / file / gzip / zstd
 - `--impact`: changed files + reverse dependencies (up to two hops) + likely related tests.
 - Multi-entry AST dependency tracing.
 - `--query`: deterministic lexical ranking, then dependency expansion around the strongest matches.
-- Hard `--max-tokens` / `--budget` and `--max-files` limits.
+- Enforced estimated-token `--max-tokens` / `--budget` and candidate-file `--max-files` limits.
 - Model-family token estimation profiles (`heuristic`, `gpt-5`, `o200k`, `cl100k`). These are offline estimates, not billable-token guarantees.
 - `--secrets redact|fail|allow`, including common API/token/JWT/private-key/credential URL patterns.
 - Generated/vendor/cache/build/lock/binary safety defaults.
+- Broad-folder scan guard with configurable entry, byte, depth and cooperative time limits.
 - Markdown, XML and JSON output.
 - Relative, absolute or hidden path headers.
 - Optional provenance manifest with Git commit, selection reasons and SHA-256 hashes.
@@ -80,11 +83,11 @@ The installed executable is still named `cxt`.
 ## Quick start
 
 ```bash
-# Open the interactive TUI in the current directory (interactive terminals)
+# Pack the current project to the clipboard
 cxt
 
-# Pack the current project directly without opening the TUI
-cxt .
+# Open the interactive review workspace
+cxt --tui
 
 # Multiple roots/files
 cxt src Cargo.toml README.md
@@ -134,10 +137,12 @@ cxt . --query "ticket pricing bug" --dry-run
 Launch it simply with:
 
 ```bash
-cxt
+cxt --tui
 ```
 
-On an interactive terminal, bare `cxt` opens the TUI immediately. Use `cxt .` when you explicitly want the non-interactive current-directory packing flow. `cxt --tui` remains available when combining the TUI with other selectors/options.
+Bare `cxt` is CLI-first: it packs the current directory, just like `cxt .`. Without `--output`, `--stdout` or `--ci`, context is copied to the clipboard. `--tui` / `-T` explicitly opens the review workspace; `-t` remains the dependency-tracing flag. The TUI requires an interactive terminal.
+
+If the clipboard is unavailable, cxt reports the actual fallback destination and creates `cxt-output.md` (or `.xml` / `.json`), refusing to overwrite an existing fallback file. Use `--stdout` or `--output` for scripts and headless environments. Explicit `--output` can overwrite its specified file.
 
 Or seed the TUI with the same selectors used by the CLI:
 
@@ -205,9 +210,34 @@ The engine exposes `prepare()`, `snapshot_file()` and `run_snapshots()`. The TUI
 
 Interactive terminals show preparation activity and CLI packing progress. cxt treats permission-denied paths, directory-walk errors, vanished files, binary inputs, and text-read failures as non-fatal skips; the remaining files continue packing. The CLI prints a compact skipped-item summary; the TUI includes recorded details in Checks. The import graph excludes common build/vendor directories and source files over 1 MiB even when packing limits are disabled. Progress rendering is disabled for CI/non-terminal output.
 
+### Scan safety
+
+Accidentally launching cxt in your home directory, an ancestor such as `C:\Users`, or a filesystem root produces a warning and blocks the scan. Choose a project directory instead. Deliberate broad scans require `--allow-broad-scan`, or **Allow broad scan** in TUI Settings; aliases resolving to these directories are guarded too. Explicit individual files are still allowed.
+
+| Limit per scan phase | Default | CLI flag | Configuration key |
+| --- | --- | --- | --- |
+| Visited files and directories | 20,000 | `--scan-max-entries` | `scan_max_entries` |
+| Eligible input size | 100 MiB | `--scan-max-mb` | `scan_max_mb` |
+| Directory traversal depth | 32 | `--scan-max-depth` | `scan_max_depth` |
+| Cooperative elapsed time | 15 seconds | `--scan-timeout` | `scan_timeout` |
+
+Limits apply to directory walking, candidate processing, tracing, impact graphs and TUI review work. Hitting a limit stops export with an explanation, not a silently incomplete packet. Raise a limit in flags, `.cxt.toml` / global configuration, or TUI Settings. `0` disables that individual limit. Flags override configuration; broad-scan permission must be explicit and cannot be enabled through global/project configuration. Saved tasks retain their explicit settings, including broad-scan permission: review task files before loading them.
+
+```bash
+# Preview a larger project with explicit limits
+cxt --scan-max-entries 50000 --scan-max-mb 200 --scan-timeout 60 --dry-run
+
+# Prefer a project path even when launching from your home directory
+cxt /path/to/project --tui
+```
+
+`--no-limit` bypasses the existing per-file size/junk rules, **not** these scan limits or the broad-folder guard. Traversal counts ignored/generated directories only when visited; custom include/ignore filters run after enumeration, so eligible input accounting can include files later excluded. Graph phases skip unsupported/oversized sources. Input limits are not a peak-memory guarantee, and cooperative time checks cannot interrupt an in-flight filesystem call, parser or Git subprocess. Git patch bytes are checked after capture. Multiple input roots and phases each have their own traversal/time budget.
+
 ## Query mode
 
 `--query` does not call an LLM or send code anywhere. It combines filename/repository-relative path matches with content matches, ranks candidates, then traces dependencies from the strongest matches. The checkout's parent directory does not affect ranking. Query mode defaults to at most 40 files unless `--max-files` is provided (`0` disables the cap).
+
+This is lexical ranking, not semantic understanding; related words, framework wiring and runtime relationships may be missed. Review the selection and Checks before export. See the [product direction](docs/PRODUCT_DIRECTION.md) for the benchmark-first roadmap and comparison with existing tools.
 
 Example:
 
@@ -254,7 +284,7 @@ cxt . --max-tokens 50000 --model gpt-5
 cxt . --budget 50000 --model gpt-5
 ```
 
-0.3 uses offline model-family estimation profiles and enforces the result as a hard context budget, including rendered document overhead. Lower-ranked files are removed first in query mode. Exact tokenizer backends are planned separately so the fast default can stay dependency-light.
+cxt uses offline model-family estimation profiles and enforces the **estimated** context budget, including rendered document overhead. Whole files are excluded to fit; lower-ranked files are removed first in query mode. Exact tokenizer backends are planned separately. These profiles do not guarantee provider token counts or costs.
 
 ## Output formats
 
@@ -281,7 +311,7 @@ cxt . --output context.md.zst --compression zstd
 
 ## Configuration
 
-`cxt` merges a global config and a repository-local `.cxt.toml`. Project-local values override global scalar values; include/ignore lists are appended.
+`cxt` merges the first available global config and `.cxt.toml` in the **launch directory** (not automatically the target folder or parent Git root). Local values override global scalars; CLI scalars override both. Include/ignore lists are appended. See the [configuration reference](docs/CLI_REFERENCE.md#configuration-and-precedence) for every key and path lookup.
 
 Global locations include `~/.config/cxt/config.toml` (or the platform equivalent) and the legacy `~/.cxtrc`.
 
@@ -291,6 +321,10 @@ default_minify = true
 model = "gpt-5"
 max_tokens = 60000
 max_output_mb = 100
+scan_max_entries = 20000
+scan_max_mb = 100
+scan_max_depth = 32
+scan_timeout = 15
 secret_policy = "redact"
 format = "markdown"
 path_style = "relative"
@@ -321,7 +355,7 @@ println!("{}", counter.count("fn main() {}"));
 
 ## Language coverage
 
-Tree-sitter parsing/minification is wired for JavaScript/JSX, TypeScript/TSX, Python, Rust, Go, C, C++, Java, C#, Ruby and PHP. Dependency extraction currently handles the import/include forms implemented by the tracer (strongest for JS/TS, Python, C/C++, Java/C#, Ruby and PHP); ecosystem-aware Rust/Go/workspace resolution is explicitly tracked for 0.4.
+Tree-sitter parsing/minification is wired for JavaScript/JSX, TypeScript/TSX, Python, Rust, Go, C, C++, Java, C#, Ruby and PHP. Dependency extraction handles supported local import/include forms, including Rust library modules, grouped uses and path attributes. Ecosystem/workspace resolution remains incomplete; Go external imports, dynamic relationships and framework aliases can be unresolved. Arduino `.ino` files can be packed/searched as text but do not currently have AST tracing/comment stripping. C/C++ headers do not automatically add paired implementation files.
 
 ## Exit codes
 

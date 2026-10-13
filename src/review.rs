@@ -1,7 +1,6 @@
 use crate::cli::Args;
 use crate::engine::{self, EngineResult, FileSnapshot, SelectionPreview, SkippedItem};
-use crate::{git, security, tracer};
-use ignore::WalkBuilder;
+use crate::{git, security};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -31,7 +30,9 @@ impl Workspace {
         let mut prepared = engine::prepare(args, cwd).map_err(|e| e.to_string())?;
         let mut files = Vec::new();
         let snapshot_options = engine::SnapshotOptions::for_args(args, cwd);
+        let mut budget = crate::scan::ScanBudget::new(crate::scan::ScanLimits::for_args(args, cwd));
         for candidate in &prepared.candidates {
+            budget.read_file(&candidate.path)?;
             match engine::snapshot_file_with_options(candidate, &snapshot_options) {
                 Ok(file) => files.push(file),
                 Err(error) => {
@@ -43,14 +44,17 @@ impl Workspace {
                 }
             }
         }
+        budget.check_time()?;
         let root = git::repository_root(&prepared.root)
             .ok()
             .map(|p| p.canonicalize().unwrap_or(p))
             .unwrap_or_else(|| prepared.root.clone());
+        let limits = crate::scan::ScanLimits::for_args(args, cwd);
+        limits.guard(&root)?;
         let statuses = git::status_map(&root);
         let mode = args.git.as_deref().unwrap_or("working");
         let mut changes = if git::repository_root(&root).is_ok() {
-            git::changes(&root, mode)?
+            git::changes_with_limits(&root, mode, limits)?
         } else {
             Vec::new()
         };
@@ -87,48 +91,21 @@ impl Workspace {
                 change.diff = security::redact_secrets(&change.diff).0;
             }
         }
-        let mut dependencies = BTreeMap::new();
-        let mut walker = WalkBuilder::new(&root);
-        walker.hidden(false).filter_entry(|entry| {
-            !entry.file_type().is_some_and(|t| t.is_dir())
-                || !matches!(
-                    entry.file_name().to_str(),
-                    Some(
-                        ".git"
-                            | "target"
-                            | "node_modules"
-                            | "vendor"
-                            | ".venv"
-                            | "dist"
-                            | "build"
-                            | "coverage"
-                    )
-                )
-        });
-        for entry in walker.build().flatten() {
-            if !entry.file_type().is_some_and(|t| t.is_file())
-                || entry.metadata().map_or(true, |m| m.len() > 1024 * 1024)
-            {
-                continue;
-            }
-            let path = entry.into_path();
-            if !path
-                .extension()
-                .and_then(|s| s.to_str())
-                .is_some_and(|ext| tracer::get_language(ext).is_some())
-            {
-                continue;
-            }
-            let path = path.canonicalize().unwrap_or(path);
-            dependencies.insert(path.clone(), tracer::direct_dependencies(&path));
-        }
+        let graph = crate::scan::graph(&root, args, cwd)?;
+        prepared.skipped_files += graph.warnings.len();
+        prepared.skipped_details.extend(
+            graph
+                .warnings
+                .into_iter()
+                .map(|reason| SkippedItem { path: None, reason }),
+        );
         Ok(Self {
             cwd: cwd.canonicalize().unwrap_or_else(|_| cwd.to_path_buf()),
             head_commit: git::head_commit(&root),
             root,
             prepared,
             files,
-            dependencies,
+            dependencies: graph.dependencies,
             changes,
             statuses,
         })

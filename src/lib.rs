@@ -10,6 +10,7 @@ pub mod query;
 pub mod resolver;
 pub mod review;
 mod rust_graph;
+pub mod scan;
 pub mod security;
 pub mod selection;
 pub mod token;

@@ -100,7 +100,7 @@ fn build_globset(patterns: &[String]) -> Result<GlobSet, String> {
     builder.build().map_err(|e| e.to_string())
 }
 
-fn is_junk_path(path: &Path) -> bool {
+pub(crate) fn is_junk_path(path: &Path) -> bool {
     const DIR_NAMES: &[&str] = &[
         ".git",
         ".hg",
@@ -126,7 +126,7 @@ fn is_junk_path(path: &Path) -> bool {
     })
 }
 
-fn is_junk_file(path: &Path) -> bool {
+pub(crate) fn is_junk_file(path: &Path) -> bool {
     let name = path
         .file_name()
         .and_then(|s| s.to_str())

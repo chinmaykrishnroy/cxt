@@ -2,13 +2,27 @@ use crate::selection::Candidate;
 use std::fs;
 use std::path::Path;
 
-pub fn rank(mut candidates: Vec<Candidate>, query: &str, root: &Path) -> Vec<Candidate> {
+pub fn rank(candidates: Vec<Candidate>, query: &str, root: &Path) -> Vec<Candidate> {
+    rank_checked(candidates, query, root, || Ok(())).unwrap_or_default()
+}
+
+pub(crate) fn rank_checked<F>(
+    mut candidates: Vec<Candidate>,
+    query: &str,
+    root: &Path,
+    mut check: F,
+) -> Result<Vec<Candidate>, String>
+where
+    F: FnMut() -> Result<(), String>,
+{
+    check()?;
     let terms = query_terms(query);
     if terms.is_empty() {
-        return candidates;
+        return Ok(candidates);
     }
 
     for candidate in &mut candidates {
+        check()?;
         let path_text = candidate
             .path
             .strip_prefix(root)
@@ -60,7 +74,8 @@ pub fn rank(mut candidates: Vec<Candidate>, query: &str, root: &Path) -> Vec<Can
 
     candidates.retain(|c| c.score > 0);
     candidates.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| a.path.cmp(&b.path)));
-    candidates
+    check()?;
+    Ok(candidates)
 }
 
 fn query_terms(query: &str) -> Vec<String> {
@@ -99,5 +114,15 @@ mod tests {
         let root = Path::new("context-budget-checkout");
         let candidate = Candidate::new(root.join("LICENSE"), "scan");
         assert!(rank(vec![candidate], "context budget", root).is_empty());
+    }
+
+    #[test]
+    fn checked_ranking_propagates_scan_cancellation() {
+        let candidate = Candidate::new(PathBuf::from("app.rs"), "scan");
+        let error = rank_checked(vec![candidate], "app", Path::new("."), || {
+            Err("Scan stopped: time limit reached".into())
+        })
+        .unwrap_err();
+        assert!(error.contains("time limit"));
     }
 }

@@ -1,6 +1,5 @@
 use crate::cli::Args;
 use crate::git;
-use ignore::WalkBuilder;
 use std::collections::BTreeMap;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
@@ -52,10 +51,17 @@ pub fn gather(args: &Args, cwd: &Path) -> Result<SelectionResult, String> {
         .into_iter()
         .map(|path| resolve_input(cwd, path))
         .collect();
+    let limits = crate::scan::ScanLimits::for_args(args, cwd);
+    for input in &resolved_inputs {
+        if input.is_dir() {
+            limits.guard(input)?;
+        }
+    }
 
     if args.diff || args.git.is_some() {
         let start = resolved_inputs.first().map(PathBuf::as_path).unwrap_or(cwd);
         let root = git::repository_root(start)?;
+        limits.guard(&root)?;
         let mode = if args.diff {
             "working".to_string()
         } else {
@@ -80,13 +86,11 @@ pub fn gather(args: &Args, cwd: &Path) -> Result<SelectionResult, String> {
         if input.is_file() {
             insert_candidate(&mut map, input, "explicit-path");
         } else if input.is_dir() {
-            scan_directory(
-                &input,
-                args.exclude_hidden,
-                args.no_limit,
-                &mut map,
-                &mut warnings,
-            );
+            let scan = crate::scan::walk_files(&input, args, cwd, false)?;
+            warnings.extend(scan.warnings);
+            for path in scan.paths {
+                insert_candidate(&mut map, path, "directory-scan");
+            }
         } else {
             return Err(format!("path does not exist: {}", input.display()));
         }
@@ -119,67 +123,6 @@ pub fn insert_candidate(
         }
         None => {
             map.insert(path.clone(), Candidate::new(path, reason));
-        }
-    }
-}
-
-fn scan_directory(
-    dir: &Path,
-    exclude_hidden: bool,
-    no_limit: bool,
-    map: &mut BTreeMap<PathBuf, Candidate>,
-    warnings: &mut Vec<String>,
-) {
-    let mut walker = WalkBuilder::new(dir);
-    // ignore::WalkBuilder hidden(true) filters dotfiles. cxt historically included them,
-    // so users opt into filtering with --exclude-hidden.
-    walker.hidden(exclude_hidden);
-    walker
-        .git_ignore(true)
-        .git_global(true)
-        .git_exclude(true)
-        .skip_stdout(true);
-    if !no_limit {
-        walker.filter_entry(|entry| {
-            if !entry.file_type().is_some_and(|ft| ft.is_dir()) {
-                return true;
-            }
-            let name = entry.file_name().to_string_lossy();
-            !matches!(
-                name.as_ref(),
-                ".git"
-                    | ".hg"
-                    | ".svn"
-                    | "target"
-                    | "node_modules"
-                    | "vendor"
-                    | ".venv"
-                    | "venv"
-                    | "__pycache__"
-                    | ".cache"
-                    | ".next"
-                    | ".nuxt"
-                    | ".turbo"
-                    | "coverage"
-                    | "dist"
-                    | "build"
-                    | "out"
-            )
-        });
-    }
-
-    for entry in walker.build() {
-        match entry {
-            Ok(entry) => {
-                if entry.file_type().is_some_and(|ft| ft.is_file()) {
-                    insert_candidate(map, entry.into_path(), "directory-scan");
-                }
-            }
-            Err(error) => {
-                // A single protected/unreadable subtree must not make the entire
-                // context scan fail. Keep going and surface it as a skipped item.
-                warnings.push(error.to_string());
-            }
         }
     }
 }

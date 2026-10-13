@@ -77,6 +77,11 @@ enum Setting {
     Hidden,
     MaxFiles,
     NoLimit,
+    AllowBroad,
+    ScanEntries,
+    ScanMb,
+    ScanDepth,
+    ScanTimeout,
     Destination,
     OutputPath,
     Compression,
@@ -104,6 +109,11 @@ const SETTINGS: &[Setting] = &[
     Setting::Hidden,
     Setting::MaxFiles,
     Setting::NoLimit,
+    Setting::AllowBroad,
+    Setting::ScanEntries,
+    Setting::ScanMb,
+    Setting::ScanDepth,
+    Setting::ScanTimeout,
     Setting::Destination,
     Setting::OutputPath,
     Setting::Compression,
@@ -134,6 +144,7 @@ impl Setting {
             | Self::Manifest
             | Self::Hidden
             | Self::NoLimit
+            | Self::AllowBroad
             | Self::DryRun
             | Self::Ci
             | Self::Wrap => &["false", "true"],
@@ -161,6 +172,11 @@ impl Setting {
             Self::Hidden => "Exclude hidden files",
             Self::MaxFiles => "Maximum candidate files",
             Self::NoLimit => "Bypass size/junk limits",
+            Self::AllowBroad => "Allow broad scan",
+            Self::ScanEntries => "Scan entry limit",
+            Self::ScanMb => "Scan input MiB limit",
+            Self::ScanDepth => "Scan depth limit",
+            Self::ScanTimeout => "Scan time limit (seconds)",
             Self::Destination => "Destination",
             Self::OutputPath => "Output filename",
             Self::Compression => "Compression",
@@ -184,6 +200,8 @@ impl Setting {
         Self::Trace => "Resolve local static imports. Dynamic imports and unsupported layouts may be incomplete.",
         Self::Impact => "Requires Git selection; suggests reverse imports and likely related tests.",
         Self::NoLimit => "true bypasses file-size/junk limits; binaries remain excluded.",
+        Self::AllowBroad => "WARNING: true permits scanning your home directory, its ancestors or filesystem root. Narrow to a project instead when possible. Scan limits still apply.",
+        Self::ScanEntries | Self::ScanMb | Self::ScanDepth | Self::ScanTimeout => "Positive integer; 0 disables this specific limit. Time limits are cooperative, not a hard OS timeout.",
         Self::Extensions | Self::Languages => "Comma-separated values; empty includes all values.",
         _ => "true or false",
     }
@@ -397,6 +415,11 @@ impl App {
         app.args.minify =
             !app.args.no_minify && (app.args.minify || config.default_minify.unwrap_or(false));
         app.args.no_minify = !app.args.minify;
+        let limits = crate::scan::ScanLimits::for_args(&app.args, cwd);
+        app.args.scan_max_entries = Some(limits.max_entries);
+        app.args.scan_max_mb = Some(limits.max_bytes / (1024 * 1024));
+        app.args.scan_max_depth = Some(limits.max_depth);
+        app.args.scan_timeout = Some(limits.timeout.as_secs());
         app.load();
         app
     }
@@ -438,6 +461,9 @@ impl App {
             self.busy = false;
             if let Some(error) = response.error {
                 self.pending_session = None;
+                if self.plan.is_none() {
+                    self.workspace = None;
+                }
                 self.status = error;
             }
             if let Some(workspace) = response.workspace {
@@ -666,6 +692,11 @@ impl App {
                 .unwrap_or(if a.query.is_some() { 40 } else { 0 })
                 .to_string(),
             Setting::NoLimit => a.no_limit.to_string(),
+            Setting::AllowBroad => a.allow_broad_scan.to_string(),
+            Setting::ScanEntries => a.scan_max_entries.unwrap_or(20_000).to_string(),
+            Setting::ScanMb => a.scan_max_mb.unwrap_or(100).to_string(),
+            Setting::ScanDepth => a.scan_max_depth.unwrap_or(32).to_string(),
+            Setting::ScanTimeout => a.scan_timeout.unwrap_or(15).to_string(),
             Setting::Destination => if a.output.is_some() {
                 "file"
             } else if a.stdout || a.ci {
@@ -758,6 +789,11 @@ impl App {
             Setting::Hidden => args.exclude_hidden = boolean()?,
             Setting::MaxFiles => args.max_files = Some(number()?.unwrap_or(0)),
             Setting::NoLimit => args.no_limit = boolean()?,
+            Setting::AllowBroad => args.allow_broad_scan = boolean()?,
+            Setting::ScanEntries => args.scan_max_entries = Some(number()?.unwrap_or(0)),
+            Setting::ScanMb => args.scan_max_mb = Some(number()?.unwrap_or(0) as u64),
+            Setting::ScanDepth => args.scan_max_depth = Some(number()?.unwrap_or(0)),
+            Setting::ScanTimeout => args.scan_timeout = Some(number()?.unwrap_or(0) as u64),
             Setting::Destination => {
                 args.output = None;
                 args.stdout = false;
@@ -898,7 +934,11 @@ impl App {
     }
     fn preview(&self) -> Cow<'_, str> {
         let Some(workspace) = &self.workspace else {
-            return "Scanning files, resolving imports and preparing safe previews…\nYou can quit with q.".into();
+            return if self.busy {
+                "Scanning files, resolving imports and preparing safe previews…\nYou can quit with q.".into()
+            } else {
+                format!("{}\n\nNo context can be exported. Press 6 for Settings to narrow input paths or adjust scan limits, then refresh with r. q quits.", self.status).into()
+            };
         };
         match self.panel {
             Panel::Checks => {
@@ -1570,13 +1610,15 @@ mod tests {
     struct Fixture(PathBuf);
     impl Fixture {
         fn new() -> Self {
+            static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
             let path = std::env::temp_dir().join(format!(
-                "cxt-tui-{}-{}",
+                "cxt-tui-{}-{}-{}",
                 std::process::id(),
                 SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
-                    .as_nanos()
+                    .as_nanos(),
+                NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
             ));
             fs::create_dir(&path).unwrap();
             fs::write(path.join("main.rs"), "fn main() {}\n").unwrap();
@@ -1797,6 +1839,11 @@ mod tests {
             (Setting::Hidden, "true"),
             (Setting::MaxFiles, "0"),
             (Setting::NoLimit, "false"),
+            (Setting::AllowBroad, "false"),
+            (Setting::ScanEntries, "1000"),
+            (Setting::ScanMb, "10"),
+            (Setting::ScanDepth, "20"),
+            (Setting::ScanTimeout, "30"),
             (Setting::Destination, "file"),
             (Setting::OutputPath, "out.json.gz"),
             (Setting::Compression, "gzip"),
@@ -1817,5 +1864,23 @@ mod tests {
         assert_eq!(app.args.compression, Compression::Gzip);
         assert!(!app.wrap);
         assert!(app.apply_setting(Setting::Impact, "true").is_err());
+    }
+
+    #[test]
+    fn failed_scan_blocks_old_workspace_and_recovers_when_limit_is_raised() {
+        let f = Fixture::new();
+        let mut app = f.app();
+        assert!(app.plan.is_some());
+        app.apply_setting(Setting::ScanEntries, "1").unwrap();
+        ready(&mut app);
+        assert!(app.status.contains("entry limit"));
+        assert!(app.preview().contains("No context can be exported"));
+        assert!(app.plan.is_none());
+        assert!(app.workspace.is_none());
+        app.replan();
+        assert!(app.plan.is_none());
+        app.apply_setting(Setting::ScanEntries, "100").unwrap();
+        ready(&mut app);
+        assert!(app.plan.as_ref().unwrap().result.is_ok());
     }
 }

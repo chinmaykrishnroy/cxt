@@ -1,42 +1,32 @@
-use crate::tracer::{direct_dependencies, get_language};
-use ignore::WalkBuilder;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 
-pub fn expand(root: &Path, seeds: &[PathBuf]) -> Vec<(PathBuf, String)> {
-    let mut source_files = Vec::new();
-    let mut tests = Vec::new();
+pub struct ImpactResult {
+    pub candidates: Vec<(PathBuf, String)>,
+    pub warnings: Vec<String>,
+}
 
-    let mut walker = WalkBuilder::new(root);
-    walker
-        .hidden(false)
-        .git_ignore(true)
-        .git_global(true)
-        .git_exclude(true)
-        .skip_stdout(true);
-    for entry in walker.build().flatten() {
-        if !entry.file_type().is_some_and(|ft| ft.is_file()) {
-            continue;
-        }
-        let path = entry.into_path();
-        if junk_dir(&path, root) {
-            continue;
-        }
-        let ext = path.extension().and_then(|x| x.to_str()).unwrap_or("");
-        if get_language(ext).is_some() {
-            if looks_like_test(&path) {
-                tests.push(path.clone());
-            }
-            source_files.push(path);
-        }
-    }
+pub fn expand(
+    root: &Path,
+    seeds: &[PathBuf],
+    args: &crate::cli::Args,
+    cwd: &Path,
+) -> Result<ImpactResult, String> {
+    let graph = crate::scan::graph(root, args, cwd)?;
+    let tests: Vec<_> = graph
+        .dependencies
+        .keys()
+        .filter(|p| looks_like_test(p))
+        .cloned()
+        .collect();
 
     let mut reverse: BTreeMap<PathBuf, Vec<PathBuf>> = BTreeMap::new();
-    for file in &source_files {
-        let file_canon = file.canonicalize().unwrap_or_else(|_| file.clone());
-        for dependency in direct_dependencies(file) {
-            let dep = dependency.canonicalize().unwrap_or(dependency);
-            reverse.entry(dep).or_default().push(file_canon.clone());
+    for (file, dependencies) in &graph.dependencies {
+        for dependency in dependencies {
+            reverse
+                .entry(dependency.clone())
+                .or_default()
+                .push(file.clone());
         }
     }
 
@@ -85,7 +75,10 @@ pub fn expand(root: &Path, seeds: &[PathBuf]) -> Vec<(PathBuf, String)> {
     }
 
     output.sort_by(|a, b| a.0.cmp(&b.0));
-    output
+    Ok(ImpactResult {
+        candidates: output,
+        warnings: graph.warnings,
+    })
 }
 
 pub(crate) fn looks_like_test(path: &Path) -> bool {
@@ -115,18 +108,6 @@ pub(crate) fn normalize_stem(stem: &str) -> String {
         .replace("_test", "")
         .replace("-test", "")
         .replace(['_', '-'], "")
-}
-
-fn junk_dir(path: &Path, root: &Path) -> bool {
-    path.strip_prefix(root)
-        .unwrap_or(path)
-        .components()
-        .any(|c| {
-            matches!(
-                c.as_os_str().to_string_lossy().as_ref(),
-                ".git" | "target" | "node_modules" | "vendor" | ".venv" | "dist" | "build"
-            )
-        })
 }
 
 fn display_rel(root: &Path, path: &Path) -> String {

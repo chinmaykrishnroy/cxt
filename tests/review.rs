@@ -12,13 +12,15 @@ use std::time::{SystemTime, UNIX_EPOCH};
 struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let name = format!(
-            "cxt-review-{}-{}",
+            "cxt-review-{}-{}-{}",
             std::process::id(),
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
         let root = std::env::temp_dir().join(name);
         fs::create_dir(&root).unwrap();

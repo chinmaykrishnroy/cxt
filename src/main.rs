@@ -13,15 +13,7 @@ use std::path::Path;
 use std::time::Duration;
 
 fn main() {
-    let no_user_args = std::env::args_os().nth(1).is_none();
-    let mut parsed = Args::parse();
-    if should_launch_tui_by_default(
-        no_user_args,
-        io::stdin().is_terminal(),
-        io::stdout().is_terminal(),
-    ) {
-        parsed.tui = true;
-    }
+    let parsed = Args::parse();
     if let Some(shell) = parsed.completions {
         Args::write_completions(shell);
         return;
@@ -37,6 +29,10 @@ fn main() {
 
     let mut reviewed_result: Option<EngineResult> = None;
     if args.tui {
+        if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
+            eprintln!("[cxt] --tui requires an interactive terminal on stdin/stdout. Use CLI flags with --stdout, --ci or --output for scripts.");
+            std::process::exit(2);
+        }
         match tui::run(&args, &cwd) {
             Ok(Some(selection)) => {
                 args = selection.args;
@@ -64,11 +60,13 @@ fn main() {
                 print_dry_run(&result);
                 return;
             }
-            if let Err(e) = deliver(&args, &result) {
-                eprintln!("[cxt] {}", e);
-                std::process::exit(3);
+            match deliver(&args, &result) {
+                Ok(destination) => print_summary(&args, &result, &destination),
+                Err(e) => {
+                    eprintln!("[cxt] {}", e);
+                    std::process::exit(3);
+                }
             }
-            print_summary(&args, &result);
         }
         Err(EngineError::Secret(message)) => {
             eprintln!("[cxt] {}", message);
@@ -79,14 +77,6 @@ fn main() {
             std::process::exit(2);
         }
     }
-}
-
-fn should_launch_tui_by_default(
-    no_user_args: bool,
-    stdin_is_terminal: bool,
-    stdout_is_terminal: bool,
-) -> bool {
-    no_user_args && stdin_is_terminal && stdout_is_terminal
 }
 
 fn progress_enabled(args: &Args) -> bool {
@@ -180,10 +170,17 @@ fn human_bytes(bytes: u64) -> String {
     }
 }
 
-fn deliver(args: &Args, result: &EngineResult) -> Result<(), String> {
+enum Delivery {
+    File(std::path::PathBuf),
+    Stdout,
+    Clipboard,
+    FallbackFile(std::path::PathBuf),
+}
+
+fn deliver(args: &Args, result: &EngineResult) -> Result<Delivery, String> {
     if let Some(path) = &args.output {
         write_file(path, args.compression, result.rendered.as_bytes())?;
-        return Ok(());
+        return Ok(Delivery::File(path.clone()));
     }
 
     if args.stdout || args.ci {
@@ -194,28 +191,30 @@ fn deliver(args: &Args, result: &EngineResult) -> Result<(), String> {
         if !result.rendered.ends_with('\n') {
             stdout.write_all(b"\n").map_err(|e| e.to_string())?;
         }
-        return Ok(());
+        return Ok(Delivery::Stdout);
     }
 
     match Clipboard::new().and_then(|mut c| c.set_text(result.rendered.clone())) {
-        Ok(_) => Ok(()),
+        Ok(_) => Ok(Delivery::Clipboard),
         Err(error) => {
             let fallback = match result.format {
                 cxt_core::output::OutputFormat::Markdown => "cxt-output.md",
                 cxt_core::output::OutputFormat::Xml => "cxt-output.xml",
                 cxt_core::output::OutputFormat::Json => "cxt-output.json",
             };
-            fs::write(fallback, &result.rendered).map_err(|write_error| {
+            let mut file = fs::OpenOptions::new().write(true).create_new(true).open(fallback).map_err(|write_error| {
                 format!(
-                    "clipboard failed ({}), and fallback {} also failed: {}",
+                    "clipboard failed ({}), and fallback {} could not be created: {}. Use --stdout or --output with a new filename.",
                     error, fallback, write_error
                 )
             })?;
+            file.write_all(result.rendered.as_bytes())
+                .map_err(|e| e.to_string())?;
             eprintln!(
                 "[cxt] clipboard unavailable; wrote context to {} instead",
                 fallback
             );
-            Ok(())
+            Ok(Delivery::FallbackFile(fallback.into()))
         }
     }
 }
@@ -283,13 +282,13 @@ fn print_skipped_details(result: &EngineResult) {
     }
     if result.skipped_details.len() > 8 {
         eprintln!(
-            "  … and {} more (open the TUI and press ! to inspect skipped items)",
+            "  … and {} more (open the TUI and press 4 to inspect skipped items)",
             result.skipped_details.len() - 8
         );
     }
 }
 
-fn print_summary(args: &Args, result: &EngineResult) {
+fn print_summary(args: &Args, result: &EngineResult, destination: &Delivery) {
     let summary = format!(
         "[cxt] packed {} files, ~{} tokens, {} redactions, {} skipped ({} by budget)",
         result.packed_files.len(),
@@ -303,10 +302,13 @@ fn print_summary(args: &Args, result: &EngineResult) {
         eprintln!("{}", summary);
     } else {
         println!("{}", summary);
-        if let Some(path) = &args.output {
-            println!("[cxt] wrote {}", path.display());
-        } else {
-            println!("[cxt] copied context to clipboard");
+        match destination {
+            Delivery::File(path) => println!("[cxt] wrote {}", path.display()),
+            Delivery::FallbackFile(path) => {
+                println!("[cxt] wrote {} (clipboard unavailable)", path.display())
+            }
+            Delivery::Clipboard => println!("[cxt] copied context to clipboard"),
+            Delivery::Stdout => {}
         }
     }
     print_skipped_details(result);
@@ -314,17 +316,22 @@ fn print_summary(args: &Args, result: &EngineResult) {
 
 #[cfg(test)]
 mod tests {
-    use super::should_launch_tui_by_default;
+    use clap::Parser;
+    use cxt_core::cli::Args;
 
     #[test]
-    fn bare_interactive_invocation_defaults_to_tui() {
-        assert!(should_launch_tui_by_default(true, true, true));
+    fn bare_invocation_defaults_to_cli_and_current_directory() {
+        let args = Args::parse_from(["cxt"]).normalized();
+        assert!(!args.tui);
+        assert_eq!(args.paths, vec![std::path::PathBuf::from(".")]);
     }
 
     #[test]
-    fn explicit_or_noninteractive_invocation_keeps_cli_mode() {
-        assert!(!should_launch_tui_by_default(false, true, true));
-        assert!(!should_launch_tui_by_default(true, false, true));
-        assert!(!should_launch_tui_by_default(true, true, false));
+    fn tui_is_explicit_and_does_not_steal_trace_short_flag() {
+        assert!(Args::parse_from(["cxt", "--tui"]).tui);
+        assert!(Args::parse_from(["cxt", "-T"]).tui);
+        let args = Args::parse_from(["cxt", "-t", "main.rs"]);
+        assert!(args.trace);
+        assert!(!args.tui);
     }
 }

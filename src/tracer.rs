@@ -287,6 +287,18 @@ pub fn trace_dependencies<F>(entry_file: &Path, mut on_discover: F) -> Vec<PathB
 where
     F: FnMut(&Path),
 {
+    trace_dependencies_checked(entry_file, &mut on_discover, |_| Ok(true)).unwrap_or_default()
+}
+
+pub(crate) fn trace_dependencies_checked<F, C>(
+    entry_file: &Path,
+    mut on_discover: F,
+    mut check: C,
+) -> Result<Vec<PathBuf>, String>
+where
+    F: FnMut(&Path),
+    C: FnMut(&Path) -> Result<bool, String>,
+{
     let mut queue = VecDeque::new();
     let mut collected = HashSet::new();
 
@@ -297,6 +309,9 @@ where
     queue.push_back(entry_abs);
 
     while let Some(current_file) = queue.pop_front() {
+        if !check(&current_file)? {
+            continue;
+        }
         for resolved in direct_dependencies(&current_file) {
             let canonical = resolved.canonicalize().unwrap_or(resolved);
             if collected.insert(canonical.clone()) {
@@ -308,7 +323,7 @@ where
 
     let mut result: Vec<PathBuf> = collected.into_iter().collect();
     result.sort();
-    result
+    Ok(result)
 }
 
 #[cfg(test)]

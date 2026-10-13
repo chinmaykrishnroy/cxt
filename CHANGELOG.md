@@ -1,6 +1,17 @@
 # Changelog
 
-## 0.4.0 (unreleased)
+## 0.4.1 (2026-10-14)
+
+- Made startup CLI-first: bare `cxt` packs the current directory to clipboard; `--tui` / `-T` explicitly opens interactive review, and `-t` remains tracing.
+- Guarded home directories, their ancestors and filesystem roots behind explicit broad-scan permission.
+- Added configurable entry, input-byte, depth and cooperative time limits shared by directory selection, tracing, impact analysis, snapshots and TUI graphs/patch review.
+- Added scan controls to TUI Settings and blocked reuse of old plans after a failed scan.
+- Corrected clipboard-fallback reporting and refused to overwrite an existing fallback output file.
+- Added scan-safety regressions and documented current query limitations and product direction.
+- Grouped CLI help, exposed the budget alias, and added usage examples and a complete option/configuration reference.
+- Made parallel scan/review/TUI test fixtures collision-resistant on coarse system clocks.
+
+## 0.4.0 (development baseline, included in 0.4.1)
 
 - Rebuilt the TUI around Source, Changes, Dependencies, Checks, Output and Settings views.
 - Added actual Git patches (including deletions), resolved import/reverse-import inspection, related-test suggestions, pinned selections, and final budget-exclusion explanations.
