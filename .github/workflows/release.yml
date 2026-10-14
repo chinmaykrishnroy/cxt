@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing vMAJOR.MINOR.PATCH tag to rebuild and publish without moving it; leave empty for a build-only run'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -19,19 +25,31 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
+      - name: Validate requested tag syntax
+        shell: bash
+        env:
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [ -n "$REQUESTED_TAG" ]; then
+            [[ "$REQUESTED_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Only an existing vMAJOR.MINOR.PATCH tag is accepted."; exit 1; }
+          fi
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - name: Validate package version and release tag
         id: version
         shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
         run: |
           version="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)"
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "This workflow publishes stable versions only; finalize the development version first."; exit 1; }
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            test "$version" = "${GITHUB_REF_NAME#v}" || { echo "Release tag must match Cargo.toml version."; exit 1; }
-            test -f "docs/releases/$GITHUB_REF_NAME.md" || { echo "Add versioned release notes before tagging."; exit 1; }
+          if [ -n "$RELEASE_TAG" ]; then
+            test "$version" = "${RELEASE_TAG#v}" || { echo "Release tag must match Cargo.toml version."; exit 1; }
+            test -f "docs/releases/$RELEASE_TAG.md" || { echo "Add versioned release notes before tagging."; exit 1; }
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - run: cargo fmt -- --check
@@ -65,6 +83,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -90,7 +110,28 @@ jobs:
       - name: Build
         run: cargo build --locked --release --target ${{ matrix.target }}
 
-      - name: Smoke test native binary
+      - name: Smoke test native binary on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $nativeTriple = (rustc -vV | Select-String '^host: ').Line.Substring(6)
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($nativeTriple -eq '${{ matrix.target }}') {
+            cargo test --locked --all-targets
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $nativeBinary = './target/${{ matrix.target }}/release/cxt.exe'
+            & $nativeBinary --help
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & $nativeBinary --export-skill target/skill-smoke/SKILL.md --skill-agent codex
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & $nativeBinary --evaluate eval/ablation.json --output target/ablation-report.json
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            Write-Output 'Cross-compiled asset; runtime validation requires the target platform.'
+          }
+
+      - name: Smoke test native binary on Unix
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           host="$(rustc -vV | sed -n 's/^host: //p')"
@@ -152,10 +193,12 @@ jobs:
       contents: write
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
     steps:
       - name: Checkout installer scripts
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
@@ -178,6 +221,7 @@ jobs:
         with:
           files: dist/*
           fail_on_unmatched_files: true
-          body_path: docs/releases/${{ github.ref_name }}.md
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          body_path: docs/releases/${{ inputs.release_tag || github.ref_name }}.md
           generate_release_notes: true
 
