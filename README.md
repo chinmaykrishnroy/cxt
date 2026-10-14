@@ -20,7 +20,7 @@
 cxt --query "request retry policy" --context focused --model cl100k --budget 8000 --manifest --output context.md
 ```
 
-0.5.0 adds symbol-level packets, exact named-tokenizer budgets, validated metadata/edge caches, read-only MCP and portable agent skills. **Task-aware retrieval remains experimental:** local lexical/structural ranking is not semantic search, and a successful export is not proof that every required implementation was found. See [measured results and limitations](docs/IMPLEMENTATION_STATUS.md).
+0.5.1 strengthens query retrieval with bounded caller/reference expansion, implementation-first budgeting, and annotated Rust-field selection. Symbol-level packets, exact named-tokenizer budgets, read-only MCP and portable agent skills remain shared across the CLI/TUI engine. **Task-aware retrieval remains experimental:** local lexical/structural ranking is not semantic search, and a successful export is not proof that every required implementation was found. See [measured results and limitations](docs/IMPLEMENTATION_STATUS.md).
 
 ## Why cxt?
 

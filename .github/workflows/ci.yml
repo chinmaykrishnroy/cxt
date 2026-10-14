@@ -42,6 +42,8 @@ jobs:
       - run: cargo build --locked --release
       - name: Exercise synthetic retrieval ablations
         run: cargo run --locked --release -- --evaluate eval/ablation.json --output target/ablation-report.json
+      - name: Exercise shared-state retrieval controls
+        run: cargo run --locked --release -- --evaluate eval/relationships.json --output target/relationships-report.json
 
   quality:
     name: Tests and Clippy

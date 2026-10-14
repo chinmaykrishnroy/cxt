@@ -47,7 +47,8 @@ pub struct Args {
     #[arg(short = 't', long, help_heading = "Input and selection")]
     pub trace: bool,
 
-    /// Rank files using local task keywords, then expand resolved imports (not semantic search).
+    /// Rank task-relevant files/symbols and expand bounded identifier/import relationships (not semantic search).
+    /// Focused/adaptive packets prioritize strong implementations before cheap supporting context.
     #[arg(long, value_name = "TEXT", help_heading = "Input and selection")]
     pub query: Option<String>,
 

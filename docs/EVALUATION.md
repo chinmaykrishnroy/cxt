@@ -10,6 +10,7 @@ Local verification, synthetic results, the exploratory public comparison and ret
 cargo build --release
 target/release/cxt --evaluate eval/corpus.json --output target/retrieval-report.json
 target/release/cxt --evaluate eval/ablation.json --output target/ablation-report.json
+target/release/cxt --evaluate eval/relationships.json --output target/relationships-report.json
 target/release/cxt --evaluate eval/corpus.json --eval-baseline /trusted/path/to/cxt-0.4.2 --output target/comparison.json
 ```
 
@@ -20,6 +21,10 @@ On Windows use `.\target\release\cxt.exe`. The optional baseline must be a trust
 Corpus schema `cxt.eval.v1` contains `dataset_kind`, `budgets`, optional `contexts`/`rankers`/`query_expansion` (array of booleans)/`max_files` (1–1000), and `tasks` with `id`, `root` (relative to corpus directory), `query`, `required_files` and `required_symbols` (`path`, `name`, `start_line`, `end_line`, optional `source_sha256`). Labels are original one-based inclusive line ranges; names may be qualified display identities, not literal substrings. Coverage requires the actual original source span in the export, plus span coordinates when present; maps do not count. Optional source hashes reject stale labels. Roots and label sources must remain under the corpus directory. The runner limits corpus size, task/mode counts, total invocations (5000), child execution duration and captured output.
 
 Report schema `cxt.eval.report.v1` retains every cold/repeat attempt, query/arguments/root, source fingerprints, exact independently counted **actual stdout** cost, budget acceptance, file/span recall, wall time and per-child peak memory where supported. `success` means invocation and packet-budget acceptance—not development-task success. A map never counts as implementation coverage. `required_source_token_share_proxy` measures covered labeled-source cost / packet cost, not true relevant-token precision; labels may omit supporting code or overlap. Failed/oversized baseline output stays recorded. Legacy estimates are not silently treated as equal-cost exact budgets.
+
+Since 0.5.1, reports classify failed children with `failure_kind`, `exit_code`, elapsed time and peak memory when available. Categories distinguish secret fail-policy, security scanner errors, scan timeout/limits, no query match, token budget, invocation timeout and otherwise unclassified CLI/invocation errors. Classification uses bounded in-memory stderr; raw stderr is drained but never stored in the report. Categories are diagnostic hints, not a replacement for inspecting a failing invocation locally. Original-source candidate-wide fail-policy is unchanged, including findings outside focused slices and in candidates later omitted by budgeting. Older reports lack these fields and cannot be retrospectively diagnosed from exit code alone.
+
+`eval/relationships.json` is a separate Python/TypeScript synthetic shared-state regression. It labels the query entry, state helper and a second handler without query terms. It controls expansion on/off at 2K/4K final packet budgets in focused/adaptive modes. These deliberately small cases measure a known failure, not independent real-task generalization.
 
 Repeat uses the current tool's metadata cache but still launches a new process and rereads sources; tokenizer startup is included. Baseline may rescan. This does not demonstrate incremental-query latency. Linux memory is sampled VmHWM; Windows uses process peak working set; unsupported platforms report null. Do not compare those methods as interchangeable measurements.
 

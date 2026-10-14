@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1 (2026-10-15)
+
+- Prioritize up to three strong focused implementations before filling query budgets with cheap supporting files; prefer explicitly named project-relative modules over generic API chatter, while keeping explicit pins first.
+- Share focused query span budgets across files with a full-budget retry for large indivisible implementations. Final rendered-packet budgets remain authoritative.
+- Extract named Rust fields and retain adjacent declaration attributes/comments and original trailing separators, avoiding whole-struct context for a configuration-field task; invalidate older parser caches.
+- Carry bounded two-hop, bidirectional exact-identifier relationships into focused query exports. Recover shared-state callers without query words, avoid ambiguous same-name expansion, and separate language families. Links remain static heuristics, not compiler-resolved references.
+- Exclude strings, comments and split-word coincidences from local reference expansion; invalidate older symbol caches for the new per-definition reference metadata.
+- Classify evaluation refusals and failures with exit codes and failed-invocation timing without retaining raw subprocess stderr; preserve actionable preparation reasons in empty-plan errors.
+- Preserve candidate-wide original-source secret fail-policy, including findings in candidates that budgeting would omit; add an explicit regression and document refusal scope.
+- Keep original-source secret findings blocking when focused-span preparation fails, instead of discarding the finding with a skipped file.
+- Add a checked-in shared-state retrieval corpus with expansion on/off controls and public CLI regressions.
+
 ## 0.5.0 (2026-10-14)
 
 - Ship a portable, comprehensive agent skill with CLI `--export-skill [FILE]`, agent-specific project locations, and TUI `E` export. Existing guides are never overwritten; no agent configuration is silently changed.

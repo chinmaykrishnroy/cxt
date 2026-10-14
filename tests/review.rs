@@ -42,6 +42,49 @@ impl Drop for Fixture {
 }
 
 #[test]
+fn query_anchors_do_not_displace_a_pinned_noncode_file() {
+    let f = Fixture::new();
+    f.write("notes.txt", &"palette guidance for rendering\n".repeat(70));
+    for i in 0..3 {
+        f.write(
+            &format!("palette_{i}.py"),
+            &format!(
+                "def palette_{i}():\n{}    return 42\n",
+                "    print('palette guidance')\n".repeat(70)
+            ),
+        );
+    }
+    let args = f.args(&[
+        "--query",
+        "palette guidance",
+        "--context",
+        "focused",
+        "--budget",
+        "1600",
+        "--model",
+        "cl100k",
+        "--no-cache",
+    ]);
+    let workspace = Workspace::load(&args, &f.0).unwrap();
+    let selected = workspace
+        .files
+        .iter()
+        .map(|s| s.file.path.clone())
+        .collect();
+    let pinned = [f.0.join("notes.txt").canonicalize().unwrap()]
+        .into_iter()
+        .collect();
+    let result = workspace
+        .plan(&args, &f.0, &selected, &pinned)
+        .result
+        .unwrap();
+    assert!(result
+        .packed_files
+        .iter()
+        .any(|file| file.path.ends_with("notes.txt")));
+}
+
+#[test]
 fn preview_and_export_share_transformation_and_detect_source_changes() {
     let f = Fixture::new();
     let secret = "x".repeat(24);

@@ -11,6 +11,7 @@ pub mod mcp;
 pub mod minifier;
 pub mod output;
 pub mod query;
+mod query_graph;
 pub mod resolver;
 pub mod review;
 mod rust_graph;

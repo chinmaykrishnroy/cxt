@@ -30,6 +30,8 @@ pub struct Symbol {
     pub kind: String,
     pub signature: String,
     pub span: SourceSpan,
+    /// Exact AST identifiers, excluding comments, strings and import syntax.
+    pub references: BTreeSet<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -63,6 +65,34 @@ fn identifier(node: Node, source: &str) -> Option<String> {
         return identifier(declarator, source);
     }
     None
+}
+
+fn references(node: Node, source: &str, names: &mut BTreeSet<String>) {
+    let kind = node.kind();
+    if kind.contains("comment")
+        || kind.contains("string")
+        || kind.contains("literal")
+        || matches!(
+            kind,
+            "use_declaration"
+                | "import_statement"
+                | "import_from_statement"
+                | "import_declaration"
+                | "preproc_include"
+                | "using_directive"
+                | "package_clause"
+        )
+    {
+        return;
+    }
+    if kind.contains("identifier") || kind == "constant" {
+        names.insert(source[node.byte_range()].to_string());
+    }
+    for i in 0..node.child_count() {
+        if let Some(child) = node.child(i) {
+            references(child, source, names);
+        }
+    }
 }
 
 fn visit(node: Node, source: &str, parents: &[String], index: &mut SourceIndex) {
@@ -110,7 +140,10 @@ fn visit(node: Node, source: &str, parents: &[String], index: &mut SourceIndex) 
             | "const_item"
             | "static_item"
             | "variable_declarator"
-    );
+    ) || (kind == "field_declaration"
+        && node
+            .parent()
+            .is_some_and(|parent| parent.kind() == "field_declaration_list"));
     let mut scope = parents.to_vec();
     if definition {
         let name = node
@@ -151,13 +184,49 @@ fn visit(node: Node, source: &str, parents: &[String], index: &mut SourceIndex) 
                 .chars()
                 .take(240)
                 .collect::<String>();
+            let mut names = BTreeSet::new();
+            references(node, source, &mut names);
+            names.remove(&name);
+            let mut source_span = span(declaration);
+            if kind == "field_declaration" {
+                if let Some(separator) =
+                    declaration.next_sibling().filter(|item| item.kind() == ",")
+                {
+                    source_span.end_byte = separator.end_byte();
+                    source_span.end_line = separator.end_position().row + 1;
+                }
+            }
+            if matches!(
+                kind,
+                "field_declaration"
+                    | "function_item"
+                    | "struct_item"
+                    | "enum_item"
+                    | "const_item"
+                    | "static_item"
+                    | "type_item"
+            ) {
+                let mut previous = declaration.prev_named_sibling();
+                while let Some(item) = previous {
+                    if !matches!(
+                        item.kind(),
+                        "attribute_item" | "line_comment" | "block_comment"
+                    ) {
+                        break;
+                    }
+                    source_span.start_byte = item.start_byte();
+                    source_span.start_line = item.start_position().row + 1;
+                    previous = item.prev_named_sibling();
+                }
+            }
             index.symbols.push(Symbol {
                 id: format!("{}:{}:{}", kind, qualified_name, node.start_byte()),
                 name: name.clone(),
                 qualified_name,
                 kind: kind.into(),
                 signature,
-                span: span(declaration),
+                span: source_span,
+                references: names,
             });
             scope.push(name);
         }
@@ -198,6 +267,11 @@ pub fn extract(path: &Path, source: &str) -> SourceIndex {
         symbol.name = crate::security::redact_secrets(&symbol.name).0;
         symbol.qualified_name = crate::security::redact_secrets(&symbol.qualified_name).0;
         symbol.signature = crate::security::redact_secrets(&symbol.signature).0;
+        symbol.references = symbol
+            .references
+            .iter()
+            .map(|name| crate::security::redact_secrets(name).0)
+            .collect();
     }
     index.identifiers = index
         .identifiers
@@ -255,6 +329,29 @@ pub fn represent_bounded(
     counter: &crate::token::TokenCounter,
     budget: Option<usize>,
 ) -> Result<(String, Vec<SourceSpan>, String), String> {
+    represent_with_hints(
+        index,
+        source,
+        level,
+        query,
+        symbol,
+        counter,
+        budget,
+        &BTreeSet::new(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn represent_with_hints(
+    index: &SourceIndex,
+    source: &str,
+    level: ContextLevel,
+    query: Option<&str>,
+    symbol: Option<&str>,
+    counter: &crate::token::TokenCounter,
+    budget: Option<usize>,
+    hints: &BTreeSet<String>,
+) -> Result<(String, Vec<SourceSpan>, String), String> {
     if level == ContextLevel::Complete && symbol.is_none() {
         return Ok((source.into(), Vec::new(), "complete".into()));
     }
@@ -283,6 +380,7 @@ pub fn represent_bounded(
         ));
     }
     let terms = query.map(words).unwrap_or_default();
+    let hint_weight = |s: &Symbol| usize::from(hints.contains(&s.qualified_name)) * 100;
     let mut scored: Vec<_> = index
         .symbols
         .iter()
@@ -296,7 +394,8 @@ pub fn represent_bounded(
             } else {
                 let tokens = words(&source[s.span.start_byte..s.span.end_byte]);
                 let names = words(&s.qualified_name);
-                terms.iter().filter(|t| tokens.contains(t)).count()
+                hint_weight(s)
+                    + terms.iter().filter(|t| tokens.contains(t)).count()
                     + 10 * terms.iter().filter(|t| names.contains(t)).count()
             };
             (score > 0 || (symbol.is_none() && terms.is_empty())).then_some((score, s))
@@ -317,8 +416,13 @@ pub fn represent_bounded(
             .then_with(|| sa.span.start_byte.cmp(&sb.span.start_byte))
     });
     if symbol.is_none() && !terms.is_empty() {
-        let cutoff = (scored[0].0 / 3).max(1);
-        scored.retain(|(score, _)| *score >= cutoff);
+        let lexical_max = scored
+            .iter()
+            .map(|(score, s)| score - hint_weight(s))
+            .max()
+            .unwrap_or(0);
+        let cutoff = (lexical_max / 3).max(1);
+        scored.retain(|(score, s)| hint_weight(s) > 0 || *score >= cutoff);
     }
     let mut cost = 0usize;
     let mut chosen: Vec<&Symbol> = Vec::new();
@@ -341,7 +445,7 @@ pub fn represent_bounded(
     for _ in 0..2 {
         let identifiers: BTreeSet<_> = chosen
             .iter()
-            .flat_map(|s| words(&source[s.span.start_byte..s.span.end_byte]))
+            .flat_map(|s| s.references.iter().cloned())
             .collect();
         for candidate in &index.symbols {
             if chosen.len() >= 24 {
@@ -349,9 +453,7 @@ pub fn represent_bounded(
             }
             let tokens = counter.count(&source[candidate.span.start_byte..candidate.span.end_byte]);
             if !chosen.iter().any(|s| s.id == candidate.id)
-                && words(&candidate.name)
-                    .iter()
-                    .all(|w| identifiers.contains(w))
+                && identifiers.contains(&candidate.name)
                 && budget.is_none_or(|limit| cost.saturating_add(tokens) <= limit)
             {
                 chosen.push(candidate);

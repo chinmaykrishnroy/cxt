@@ -31,6 +31,14 @@ impl fmt::Display for EngineError {
     }
 }
 
+fn secret_refusal(path: &Path, count: usize) -> EngineError {
+    EngineError::Secret(format!(
+        "secret policy 'fail' blocked {} ({} findings). Use --secrets redact to sanitize.",
+        path.display(),
+        count
+    ))
+}
+
 #[derive(Debug, Clone)]
 pub struct SkippedItem {
     pub path: Option<PathBuf>,
@@ -157,16 +165,52 @@ pub fn snapshot_file_with_options(
         .to_string();
     let indexed = options.index_store.load(&candidate.path, &raw);
     let index = indexed.index;
-    let (mut content, spans, representation) = crate::symbols::represent_bounded(
-        &index,
-        &raw,
-        options.context,
-        options.query.as_deref(),
-        options.symbol.as_deref(),
-        &options.counter,
-        options.span_budget,
-    )
-    .map_err(EngineError::General)?;
+    let represent = |budget| {
+        crate::symbols::represent_with_hints(
+            &index,
+            &raw,
+            options.context,
+            options.query.as_deref(),
+            options.symbol.as_deref(),
+            &options.counter,
+            budget,
+            &candidate.query_symbols,
+        )
+    };
+    let shared_budget = if options.query.is_some()
+        && options.symbol.is_none()
+        && matches!(
+            options.context,
+            crate::symbols::ContextLevel::Focused | crate::symbols::ContextLevel::Adaptive
+        ) {
+        options
+            .span_budget
+            .map(|budget| (budget / 3).saturating_sub(256).max(1))
+    } else {
+        options.span_budget
+    };
+    let initial = represent(shared_budget);
+    let shared = shared_budget != options.span_budget
+        && initial
+            .as_ref()
+            .is_ok_and(|(_, _, representation)| representation == "focused");
+    let represented = if shared_budget != options.span_budget
+        && (initial.is_err()
+            || initial
+                .as_ref()
+                .is_ok_and(|(_, _, representation)| representation == "map"))
+    {
+        represent(options.span_budget)
+    } else {
+        initial
+    };
+    let (mut content, spans, representation) = represented.map_err(|error| {
+        if options.policy == SecretPolicy::Fail && secret_count > 0 {
+            secret_refusal(&candidate.path, secret_count)
+        } else {
+            EngineError::General(error)
+        }
+    })?;
     if options.minify {
         if let Some(lang) = get_language(&language) {
             content = minify_syntax(&content, lang);
@@ -180,13 +224,17 @@ pub fn snapshot_file_with_options(
         security::redact_findings(&content, &findings)
     };
     let tokens = options.counter.count(&content);
+    let mut reasons = candidate.reasons.clone();
+    if shared {
+        reasons.push("query-span-share: soft per-file budget; large single implementations may retry the full budget".into());
+    }
     let file = PackedFile {
         path: candidate.path.clone(),
         content,
         language,
         tokens,
         score: candidate.score,
-        reasons: candidate.reasons.clone(),
+        reasons,
         redactions,
         spans,
         representation,
@@ -513,7 +561,7 @@ where
                 prepared.skipped_files += 1;
                 prepared.skipped_details.push(SkippedItem {
                     path: Some(candidate.path.clone()),
-                    reason: format!("read failed: {}", error),
+                    reason: format!("preparation failed: {}", error),
                 });
             }
         }
@@ -594,21 +642,59 @@ pub fn run_snapshots(
     ) && args.query.is_some()
         && args.symbol.is_none()
     {
+        let terms = crate::query::query_terms(args.query.as_deref().unwrap_or_default());
+        let explicit_module = |path: &Path| {
+            path.strip_prefix(&root)
+                .ok()
+                .and_then(Path::parent)
+                .is_some_and(|parent| {
+                    parent.components().any(|component| {
+                        crate::symbols::words(&component.as_os_str().to_string_lossy())
+                            .iter()
+                            .any(|word| word.len() >= 3 && terms.contains(word))
+                    })
+                })
+        };
+        let mut anchors: Vec<_> = snapshots
+            .iter()
+            .filter(|s| s.file.representation == "focused" && s.file.score > 0)
+            .map(|s| (&s.file.path, s.file.score))
+            .collect();
+        anchors.sort_by(|(pa, sa), (pb, sb)| {
+            explicit_module(pb)
+                .cmp(&explicit_module(pa))
+                .then_with(|| sb.cmp(sa))
+                .then_with(|| pa.cmp(pb))
+        });
+        let anchors: std::collections::BTreeSet<_> = anchors
+            .into_iter()
+            .take(3)
+            .map(|(p, _)| p.clone())
+            .collect();
         snapshots.sort_by(|a, b| {
+            let aa = anchors.contains(&a.file.path);
+            let ba = anchors.contains(&b.file.path);
             let av = a.file.score.max(1) as f64 / a.file.tokens.max(1) as f64;
             let bv = b.file.score.max(1) as f64 / b.file.tokens.max(1) as f64;
-            bv.total_cmp(&av)
+            (b.file.score == i64::MAX)
+                .cmp(&(a.file.score == i64::MAX))
+                .then_with(|| ba.cmp(&aa))
+                .then_with(|| {
+                    if aa && ba {
+                        explicit_module(&b.file.path)
+                            .cmp(&explicit_module(&a.file.path))
+                            .then_with(|| b.file.score.cmp(&a.file.score))
+                    } else {
+                        bv.total_cmp(&av)
+                    }
+                })
                 .then_with(|| a.file.path.cmp(&b.file.path))
         });
     }
     for snapshot in snapshots {
         let mut file = snapshot.file;
         if secret_policy == SecretPolicy::Fail && snapshot.secret_count > 0 {
-            return Err(EngineError::Secret(format!(
-                "secret policy 'fail' blocked {} ({} findings). Use --secrets redact to sanitize.",
-                file.path.display(),
-                snapshot.secret_count
-            )));
+            return Err(secret_refusal(&file.path, snapshot.secret_count));
         }
         if max_tokens.is_some_and(|budget| {
             content_tokens
@@ -638,9 +724,16 @@ pub fn run_snapshots(
     }
 
     if packed.is_empty() && !selected_files.is_empty() {
-        return Err(EngineError::General(
-            "no selected file fit the active safety/token limits".to_string(),
-        ));
+        let mut message = if budget_skipped > 0 {
+            "no selected file fits the token budget; increase --budget or narrow the selection"
+                .to_string()
+        } else {
+            "no selected file fit the active safety/token limits".to_string()
+        };
+        for skipped in skipped_details.iter().take(3) {
+            message.push_str(&format!("\n  - {}", skipped.reason));
+        }
+        return Err(EngineError::General(message));
     }
 
     let git_commit = if args.manifest {
@@ -867,6 +960,7 @@ where
         match map.get_mut(&key) {
             Some(existing) => {
                 existing.score = existing.score.max(candidate.score);
+                existing.query_symbols.extend(candidate.query_symbols);
                 for reason in candidate.reasons {
                     if !existing.reasons.contains(&reason) {
                         existing.reasons.push(reason);

@@ -179,40 +179,8 @@ where
         candidate.score += score;
     }
 
-    let mut seeds: Vec<_> = candidates
-        .iter()
-        .enumerate()
-        .filter(|(_, c)| c.score > 0)
-        .map(|(i, c)| (i, c.score))
-        .collect();
-    seeds.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
-    seeds.truncate(8);
-    let mut graph_boost = vec![0; candidates.len()];
-    for (seed, value) in seeds
-        .into_iter()
-        .filter(|_| expand && ranker == Ranker::Hybrid)
-    {
-        check()?;
-        for (i, index) in indices.iter().enumerate() {
-            if i % 64 == 0 {
-                check()?;
-            }
-            if i != seed
-                && index
-                    .symbols
-                    .iter()
-                    .any(|s| indices[seed].identifiers.contains(&s.name))
-            {
-                graph_boost[i] = graph_boost[i].max((value / 3).min(30));
-            }
-        }
-    }
-    for (c, boost) in candidates.iter_mut().zip(graph_boost) {
-        if boost > 0 {
-            c.score += boost;
-            c.reasons
-                .push("query-lexical-reference (not resolved call graph)".into());
-        }
+    if expand && ranker == Ranker::Hybrid {
+        crate::query_graph::expand(&mut candidates, &indices, &terms, &mut check)?;
     }
 
     candidates.retain(|c| c.score > 0);
@@ -221,7 +189,7 @@ where
     Ok(candidates)
 }
 
-fn query_terms(query: &str) -> Vec<String> {
+pub(crate) fn query_terms(query: &str) -> Vec<String> {
     const STOP: &[&str] = &[
         "the", "and", "for", "with", "from", "this", "that", "why", "does", "when", "what",
         "where", "into", "fail", "fails", "failing", "issue", "bug", "error", "code", "file",

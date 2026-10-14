@@ -9,6 +9,7 @@ pub struct Candidate {
     pub path: PathBuf,
     pub score: i64,
     pub reasons: Vec<String>,
+    pub query_symbols: std::collections::BTreeSet<String>,
 }
 
 impl Candidate {
@@ -17,6 +18,7 @@ impl Candidate {
             path,
             score: 0,
             reasons: vec![reason.into()],
+            query_symbols: Default::default(),
         }
     }
 }

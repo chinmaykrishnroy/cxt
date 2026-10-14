@@ -1,0 +1,32 @@
+{
+  "schema": "cxt.eval.v1",
+  "dataset_kind": "synthetic two-hop shared-state regressions; not held-out real tasks or AI task success",
+  "budgets": [2000, 4000],
+  "contexts": ["focused", "adaptive"],
+  "rankers": ["hybrid"],
+  "query_expansion": [true, false],
+  "tasks": [
+    {
+      "id": "python-shared-state",
+      "root": "fixtures/relationships-python",
+      "query": "volume changes affect multiple clients",
+      "required_files": ["audio.py", "state.py", "events.py"],
+      "required_symbols": [
+        {"path": "audio.py", "name": "change_volume", "start_line": 4, "end_line": 5},
+        {"path": "state.py", "name": "commit_level", "start_line": 1, "end_line": 2},
+        {"path": "events.py", "name": "dispatch", "start_line": 4, "end_line": 5}
+      ]
+    },
+    {
+      "id": "typescript-shared-state",
+      "root": "fixtures/relationships-typescript",
+      "query": "volume changes affect multiple clients",
+      "required_files": ["audio.ts", "state.ts", "events.ts"],
+      "required_symbols": [
+        {"path": "audio.ts", "name": "changeVolume", "start_line": 3, "end_line": 5},
+        {"path": "state.ts", "name": "commitLevel", "start_line": 1, "end_line": 3},
+        {"path": "events.ts", "name": "dispatch", "start_line": 3, "end_line": 5}
+      ]
+    }
+  ]
+}

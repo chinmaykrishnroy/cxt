@@ -54,6 +54,51 @@ fn normalized(path: &str) -> String {
     path.replace('\\', "/")
 }
 
+struct InvocationFailure {
+    message: String,
+    kind: &'static str,
+    exit_code: Option<i32>,
+    elapsed_ms: Option<f64>,
+    peak_memory_bytes: Option<u64>,
+}
+
+impl From<&str> for InvocationFailure {
+    fn from(message: &str) -> Self {
+        Self {
+            message: message.into(),
+            kind: "invocation_error",
+            exit_code: None,
+            elapsed_ms: None,
+            peak_memory_bytes: None,
+        }
+    }
+}
+
+// Classify only; never retain raw stderr, which can contain source or credentials.
+fn failure_kind(code: Option<i32>, stderr: &str) -> &'static str {
+    if code == Some(4) {
+        if stderr.contains("secret policy 'fail'") {
+            "secret_policy"
+        } else {
+            "security_scanner"
+        }
+    } else if stderr.contains("Scan stopped: time limit reached") {
+        "scan_timeout"
+    } else if stderr.contains("Scan stopped:") {
+        "scan_limit"
+    } else if stderr.contains("query matched no files") {
+        "no_query_match"
+    } else if stderr.contains("token budget")
+        || stderr.contains("no relevant implementation span fits")
+        || stderr.contains("metadata/output overhead exceeds")
+        || stderr.contains("no selected file fit after including rendered metadata overhead")
+    {
+        "token_budget"
+    } else {
+        "cli_error"
+    }
+}
+
 #[cfg(windows)]
 fn peak_memory(child: &Child) -> Option<u64> {
     use std::os::windows::io::AsRawHandle;
@@ -107,17 +152,30 @@ fn execute(
     executable: &Path,
     root: &Path,
     arguments: &[String],
-) -> Result<(Value, String, f64, Option<u64>), String> {
+) -> Result<(Value, String, f64, Option<u64>), InvocationFailure> {
     let started = Instant::now();
     let mut child = Command::new(executable)
         .current_dir(root)
         .args(arguments)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|_| "evaluation executable could not start")?;
     let stdout = child.stdout.take().ok_or("missing child stdout")?;
+    let mut stderr = child.stderr.take().ok_or("missing child stderr")?;
+    let error_reader = std::thread::spawn(move || {
+        let mut retained = Vec::new();
+        let mut buffer = [0u8; 4096];
+        while let Ok(length) = stderr.read(&mut buffer) {
+            if length == 0 {
+                break;
+            }
+            let keep = length.min((64usize * 1024).saturating_sub(retained.len()));
+            retained.extend_from_slice(&buffer[..keep]);
+        }
+        retained
+    });
     let reader = std::thread::spawn(move || {
         let mut bytes = Vec::new();
         stdout
@@ -150,14 +208,29 @@ fn execute(
         .join()
         .map_err(|_| "evaluation output reader failed")?
         .map_err(|_| "evaluation output read failed")?;
+    let errors = error_reader
+        .join()
+        .map_err(|_| "evaluation error reader failed")?;
     if timed_out {
-        return Err("evaluation invocation exceeded 60 seconds".into());
+        return Err(InvocationFailure {
+            message: "evaluation invocation exceeded 60 seconds".into(),
+            kind: "invocation_timeout",
+            exit_code: status.code(),
+            elapsed_ms: Some(started.elapsed().as_secs_f64() * 1000.0),
+            peak_memory_bytes: peak,
+        });
     }
     if !status.success() {
-        return Err(format!(
-            "CLI exited with code {:?}; no context accepted",
-            status.code()
-        ));
+        return Err(InvocationFailure {
+            message: format!(
+                "CLI exited with code {:?}; no context accepted",
+                status.code()
+            ),
+            kind: failure_kind(status.code(), &String::from_utf8_lossy(&errors)),
+            exit_code: status.code(),
+            elapsed_ms: Some(started.elapsed().as_secs_f64() * 1000.0),
+            peak_memory_bytes: peak,
+        });
     }
     if bytes.len() > 16 * 1024 * 1024 {
         return Err("evaluation output exceeded limit".into());
@@ -346,7 +419,13 @@ pub fn evaluate(path: &Path, executable: &Path, baseline: Option<&Path>) -> Resu
                     }
                     let mut record = json!({"task":task.id,"query":task.query,"launch_directory":root,"arguments":arguments,"tool":tool,"executable":executable.display().to_string(),"context":context,"ranker":ranker,"query_expansion":expand,"phase":phase,"budget":budget,"file_recall":0.0,"symbol_recall":0.0,"success":false});
                     match execute(executable, &root, &arguments) {
-                        Err(error) => record["error"] = json!(error),
+                        Err(error) => {
+                            record["error"] = json!(error.message);
+                            record["failure_kind"] = json!(error.kind);
+                            record["exit_code"] = json!(error.exit_code);
+                            record["elapsed_ms"] = json!(error.elapsed_ms);
+                            record["peak_memory_bytes"] = json!(error.peak_memory_bytes);
+                        }
                         Ok((packet, rendered, elapsed, peak)) => {
                             let tokens = counter.count(&rendered);
                             let accepted = tokens <= *budget;

@@ -174,6 +174,7 @@ impl Workspace {
                 path: s.file.path.clone(),
                 score: s.file.score,
                 reasons: s.file.reasons.clone(),
+                query_symbols: Default::default(),
             })
             .collect();
         let result =

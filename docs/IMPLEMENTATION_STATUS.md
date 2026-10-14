@@ -1,5 +1,7 @@
 # Task-aware implementation status
 
+For 0.5.1 query changes and final-binary regression results, see [the release verification report](QUERY_0_5_1.md). The [first query reliability pass](QUERY_RETRIEVAL_CYCLE.md) and release measurements below remain historical evidence for their identified binaries.
+
 Release preparation: **0.5.0**, 2026-10-14. The measurements below were captured from the preceding **0.5.0-dev** snapshot unless a section explicitly identifies final-release validation. They are not measurements of the published GitHub binaries. The installed user executable has not been replaced. See the live CI/release badges in the README for hosted status.
 
 ## Implemented
