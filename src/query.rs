@@ -1,15 +1,59 @@
 use crate::selection::Candidate;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
+
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    clap::ValueEnum,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum Ranker {
+    #[default]
+    Hybrid,
+    Lexical,
+    Symbols,
+    Legacy,
+}
 
 pub fn rank(candidates: Vec<Candidate>, query: &str, root: &Path) -> Vec<Candidate> {
     rank_checked(candidates, query, root, || Ok(())).unwrap_or_default()
 }
 
 pub(crate) fn rank_checked<F>(
+    candidates: Vec<Candidate>,
+    query: &str,
+    root: &Path,
+    check: F,
+) -> Result<Vec<Candidate>, String>
+where
+    F: FnMut() -> Result<(), String>,
+{
+    rank_with_store_checked(
+        candidates,
+        query,
+        root,
+        &crate::index::IndexStore::new(None),
+        Ranker::Hybrid,
+        true,
+        check,
+    )
+}
+
+pub(crate) fn rank_with_store_checked<F>(
     mut candidates: Vec<Candidate>,
     query: &str,
     root: &Path,
+    store: &crate::index::IndexStore,
+    ranker: Ranker,
+    expand: bool,
     mut check: F,
 ) -> Result<Vec<Candidate>, String>
 where
@@ -21,7 +65,52 @@ where
         return Ok(candidates);
     }
 
-    for candidate in &mut candidates {
+    let mut documents = Vec::new();
+    let mut legacy_scores = Vec::new();
+    let mut indices = Vec::new();
+    let mut frequencies = BTreeMap::<String, usize>::new();
+    for candidate in &candidates {
+        check()?;
+        let content = fs::read_to_string(&candidate.path).unwrap_or_default();
+        let words = crate::symbols::words(&content);
+        let term_counts: BTreeMap<_, _> = terms
+            .iter()
+            .map(|term| {
+                (
+                    term.clone(),
+                    words.iter().filter(|word| *word == term).count(),
+                )
+            })
+            .collect();
+        for (term, count) in &term_counts {
+            if *count > 0 {
+                *frequencies.entry(term.clone()).or_default() += 1;
+            }
+        }
+        documents.push((words.len(), term_counts));
+        legacy_scores.push(if ranker == Ranker::Legacy {
+            let lower = content.to_lowercase();
+            terms
+                .iter()
+                .map(|term| {
+                    let n = lower.match_indices(term).take(8).count();
+                    if n > 0 {
+                        6 + 2 * n.min(5) as i64
+                    } else {
+                        0
+                    }
+                })
+                .sum::<i64>()
+        } else {
+            0
+        });
+        indices.push(store.load(&candidate.path, &content).index);
+    }
+    let average = (documents.iter().map(|(length, _)| *length).sum::<usize>() as f64
+        / documents.len().max(1) as f64)
+        .max(1.0);
+    let count = candidates.len() as f64;
+    for (i, candidate) in candidates.iter_mut().enumerate() {
         check()?;
         let path_text = candidate
             .path
@@ -47,29 +136,83 @@ where
                 matched_path.push(term.clone());
             }
         }
-        if !matched_path.is_empty() {
+        if !matched_path.is_empty() && ranker != Ranker::Symbols {
             candidate
                 .reasons
                 .push(format!("query-path:{}", matched_path.join(",")));
         }
 
-        if let Ok(content) = fs::read_to_string(&candidate.path) {
-            let lower = content.to_ascii_lowercase();
-            let mut content_matches = 0usize;
-            for term in &terms {
-                let count = lower.match_indices(term.as_str()).take(8).count();
-                if count > 0 {
-                    content_matches += 1;
-                    score += 6 + (count.min(5) as i64 * 2);
-                }
-            }
-            if content_matches > 0 {
-                candidate
-                    .reasons
-                    .push(format!("query-content:{}-terms", content_matches));
+        let mut bm25 = 0.0;
+        for term in &terms {
+            let frequency = *documents[i].1.get(term).unwrap_or(&0) as f64;
+            let df = *frequencies.get(term).unwrap_or(&0) as f64;
+            if frequency > 0.0 {
+                let idf = (1.0 + (count - df + 0.5) / (df + 0.5)).ln();
+                bm25 += idf * frequency * 2.2
+                    / (frequency + 1.2 * (0.25 + 0.75 * documents[i].0 as f64 / average));
             }
         }
+        let symbol_matches = indices[i]
+            .symbols
+            .iter()
+            .map(|s| {
+                let words = crate::symbols::words(&s.qualified_name);
+                terms.iter().filter(|t| words.contains(t)).count()
+            })
+            .max()
+            .unwrap_or(0);
+        match ranker {
+            Ranker::Hybrid => score += (bm25 * 12.0).round() as i64 + symbol_matches as i64 * 24,
+            Ranker::Lexical => score += (bm25 * 12.0).round() as i64,
+            Ranker::Symbols => score = symbol_matches as i64 * 24,
+            Ranker::Legacy => score += legacy_scores[i],
+        }
+        candidate.reasons.push(format!("ranker:{ranker:?}"));
+        if bm25 > 0.0 && matches!(ranker, Ranker::Hybrid | Ranker::Lexical) {
+            candidate.reasons.push(format!("query-bm25:{:.3}", bm25));
+        }
+        if symbol_matches > 0 && matches!(ranker, Ranker::Hybrid | Ranker::Symbols) {
+            candidate
+                .reasons
+                .push(format!("query-symbol:{symbol_matches}-terms"));
+        }
         candidate.score += score;
+    }
+
+    let mut seeds: Vec<_> = candidates
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c.score > 0)
+        .map(|(i, c)| (i, c.score))
+        .collect();
+    seeds.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
+    seeds.truncate(8);
+    let mut graph_boost = vec![0; candidates.len()];
+    for (seed, value) in seeds
+        .into_iter()
+        .filter(|_| expand && ranker == Ranker::Hybrid)
+    {
+        check()?;
+        for (i, index) in indices.iter().enumerate() {
+            if i % 64 == 0 {
+                check()?;
+            }
+            if i != seed
+                && index
+                    .symbols
+                    .iter()
+                    .any(|s| indices[seed].identifiers.contains(&s.name))
+            {
+                graph_boost[i] = graph_boost[i].max((value / 3).min(30));
+            }
+        }
+    }
+    for (c, boost) in candidates.iter_mut().zip(graph_boost) {
+        if boost > 0 {
+            c.score += boost;
+            c.reasons
+                .push("query-lexical-reference (not resolved call graph)".into());
+        }
     }
 
     candidates.retain(|c| c.score > 0);
@@ -84,13 +227,9 @@ fn query_terms(query: &str) -> Vec<String> {
         "where", "into", "fail", "fails", "failing", "issue", "bug", "error", "code", "file",
     ];
     let mut terms: Vec<String> = Vec::new();
-    for token in query
-        .to_ascii_lowercase()
-        .split(|c: char| !c.is_alphanumeric() && c != '_' && c != '-')
-    {
-        if token.len() >= 3 && !STOP.contains(&token) && !terms.iter().any(|t| t.as_str() == token)
-        {
-            terms.push(token.to_string());
+    for token in crate::symbols::words(query) {
+        if token.len() >= 2 && !STOP.contains(&token.as_str()) && !terms.contains(&token) {
+            terms.push(token);
         }
     }
     terms

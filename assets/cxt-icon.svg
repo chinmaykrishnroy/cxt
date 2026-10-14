@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">cxt</title>
+  <desc id="desc">A focused source window drawn from a connected code graph.</desc>
+  <defs>
+    <linearGradient id="signal" x1="28" y1="30" x2="99" y2="103" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64E8DE"/><stop offset="1" stop-color="#8D9AFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="126" height="126" rx="30" fill="#0C1422" stroke="#28384D" stroke-width="2"/>
+  <g stroke="#32465F" stroke-width="2" stroke-linecap="round">
+    <path d="M18 27 40 43M110 24 88 43M18 101 40 84M111 104 88 85"/>
+    <path d="M18 27V101M110 24 111 104" stroke-dasharray="2 6"/>
+  </g>
+  <g fill="#526A88"><circle cx="18" cy="27" r="4"/><circle cx="110" cy="24" r="4"/><circle cx="18" cy="101" r="4"/><circle cx="111" cy="104" r="4"/></g>
+  <path d="M46 32H35a5 5 0 0 0-5 5v54a5 5 0 0 0 5 5h11m36-64h11a5 5 0 0 1 5 5v54a5 5 0 0 1-5 5H82" stroke="url(#signal)" stroke-width="5" stroke-linecap="round"/>
+  <path d="m54 49-10 15 10 15m20-30 10 15-10 15" stroke="#F1F6FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m68 48-8 32" stroke="url(#signal)" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="64" cy="96" r="4" fill="#64E8DE"/>
+</svg>

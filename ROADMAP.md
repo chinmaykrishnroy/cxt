@@ -1,6 +1,16 @@
 # cxt roadmap
 
-`cxt 0.4` adds a review workspace over the reusable engine. The long-term identity remains: **do not dump a repository into an LLM; determine the smallest useful slice for the task.**
+`cxt 0.5.0` adds experimental task-aware retrieval over the reusable review engine. The long-term identity remains: **do not dump a repository into an LLM; determine a reviewable useful slice for the task.**
+
+## Implemented in 0.5.0
+
+Source/export hardening, AST symbol indexing, hybrid BM25/symbol/reference ranking, complete/map/focused/adaptive representations, exact offline named tokenizers, parser-metadata reuse, scoped read-only MCP, optional Gitleaks, improved ecosystem resolution, Symbols TUI controls and a synthetic evaluation/ablation runner are implemented. See [engine contracts](docs/CONTEXT_ENGINE.md) and [evaluation](docs/EVALUATION.md).
+
+This combines the initial implementation work across the milestones below; it does **not** complete every milestone's evidence gate. Stable 1.0 APIs, compiler-complete graphs, zero-read persistent querying, downstream task-success gains and competitor superiority are not established. Release assets are available only after the tagged build workflow succeeds.
+
+## Next: retrieval quality, not feature count
+
+The updated external assessment identifies the main remaining gap: finding the correct implementation in real public tasks. The next quality milestone should categorize retained refusal/timeout/budget failures by tool build and stage, improve definition/reference relationships and low-confidence fallback without weakening secret policy, and measure held-out tasks with independently reviewed labels. A persistent searchable index is a candidate latency improvement, not an existing feature. Controlled downstream coding-task success and cost comparisons remain a separate future experiment; proposed recall/acceptance targets are not measured results.
 
 ## Implemented in 0.2
 
@@ -48,53 +58,56 @@
 - Saved task options, selections and source fingerprints without source content.
 - Repository-relative query ranking and local Rust library/module tracing.
 
-## Next Git/TUI work
+## Source fidelity and export integrity (implemented; release gates required)
 
-- Rich commit/history browser and better rename/deletion representation
-- Incremental graph refresh and larger real-world retrieval benchmarks
-- Theme/config customization
+- Syntax-aware compaction preserving literal content, token boundaries and meaningful comment directives.
+- Collision-free Markdown boundaries and valid, recoverable JSON/XML content.
+- Parser-backed regressions for multiple languages, line endings and adversarial source.
+- Accurate help/docs and explicit limits on fidelity, security and token claims.
+- Release gate: full tests, format, strict Clippy, optimized build and runtime checks. Do not advertise universal losslessness or security guarantees.
 
-## Next — ecosystem-aware resolvers
+## 0.5 — measurable retrieval
 
-- Node package exports/workspaces, tsconfig references
-- Python `pyproject.toml`, namespace packages and editable/src layouts
-- Cargo workspaces/modules
-- `go.mod` / `go.work`
-- Maven/Gradle source roots
-- `.csproj` / solutions
-- CMake/include paths
+- Versioned, locally runnable task corpus with reviewed required-file/symbol labels; see [evaluation protocol](docs/EVALUATION.md).
+- Record the 0.4.2 baseline before changing query ranking; evaluate at fixed budgets and publish omissions/failures.
+- Initial symbol index with names, kinds, qualified identities and original byte/line ranges.
+- Experiment with BM25 and symbol signals, retaining deterministic offline fallbacks and selection reasons.
+- Exit gate: reproducible evaluation and language-coverage fixtures, not an unsupported superiority claim.
 
-## 0.5 — persistent code graph
+## 0.6 — focused context packets
 
-- Files, symbols, imports, reverse dependencies, entry points and tests
-- Incremental graph cache keyed by file hashes
-- `cxt --reverse <file>` and graph inspection
+- Map, focused implementation and complete-file representations; whole-file fallback when slicing confidence is low.
+- Budget symbols/spans with imports, related tests, explicit exclusions and source provenance.
+- Keep CLI, TUI and library consumers on the same reviewed plan.
+- Exit gate: demonstrated required-symbol recall and relevant-context precision at fixed cost, plus source-fidelity checks.
 
-## 0.6 — symbol-level context
+## 0.7 — accurate accounting and incremental indexing
 
-- Symbol index across supported languages
-- `cxt file --symbol updateVolume`
-- Slice a symbol with required imports/types/callers/callees
-- Whole-file fallback when slicing confidence is low
+- Named offline exact tokenizers on the final rendered packet; visibly estimated fallback profiles.
+- Content/parser/config-keyed cache invalidation for edits, deletions, renames and branch changes.
+- Measure cold/warm latency and memory; optimize only with reproducible evidence.
 
-## 0.7 — ranking and budget optimizer
+Named tokenizers, hash-validated parsing and configuration-aware persistent dependency edges exist now. A generated 500-module/100,000-function workload verifies reuse/edit/rename behavior; public large-monorepo warm-query gains remain a separate evidence gate. Source rereads and fingerprinting are still required.
 
-- Exact tokenizer backends in addition to fast offline estimates
-- Lexical + symbol + graph + Git recency scoring
-- Budget optimizer that can choose slices rather than whole files
-- Retrieval quality benchmark corpus
+## 0.8 — secure agent integration
 
-## 0.8 — tests and change impact
+- Workspace-scoped MCP operations for search/context/symbol/trace/change/test queries.
+- Stable structured responses with spans, costs, reasons, omissions and source fingerprints.
+- Explicit roots, symlink/read/output limits and opt-in network behavior; never unrestricted filesystem access.
 
-- Framework-aware test discovery
-- Coverage/test metadata integration where available
-- Configurable impact depth and graph explanations
+## 0.9 — ecosystem reliability
 
-## 0.9 — agents and embedding
+- Node package exports/workspaces, JSONC tsconfig inheritance and references.
+- Python namespaces/src layouts, Cargo workspaces, Go modules/workspaces and other build-system roots.
+- Framework-aware test discovery and unresolved-edge diagnostics.
+- Arduino `.ino` language coverage, large-monorepo stress tests and strengthened secret-policy fixtures.
+- Evaluate an established offline secret-scanning backend before raising security claims.
 
-- MCP server: `get_context`, `search`, `trace`, `get_symbol`, `get_diff_context`, `get_related_tests`
-- Stable library API
-- Incremental cache and monorepo hardening
+The current implementation covers common JSONC/Node/Python/local Cargo/Go workspace/Java source-root cases and optional Gitleaks. Cargo target tables and local Go replacements have dedicated regressions; full compiler/target/feature/version semantics, TypeScript build references and framework-aware discovery remain coverage gaps, not completed compiler-equivalence claims.
+
+## Deliberately deferred
+
+Themes, hosted accounts, cloud sync, built-in chat, a new autonomous coding agent and mandatory embedding/LLM retrieval. Optional reranking must earn its cost in the evaluation corpus. Competitor comparisons require pinned versions and measured results.
 
 ## 1.0
 

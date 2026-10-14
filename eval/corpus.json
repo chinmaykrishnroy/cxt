@@ -1,0 +1,491 @@
+{
+  "schema": "cxt.eval.v1",
+  "dataset_kind": "synthetic acceptance fixtures; not real bug/task success benchmarks",
+  "budgets": [
+    8000,
+    16000,
+    32000
+  ],
+  "tasks": [
+    {
+      "id": "rust-1",
+      "root": "fixtures/rust",
+      "query": "route volume client",
+      "required_files": [
+        "audio.rs"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.rs",
+          "name": "route_volume",
+          "start_line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "id": "rust-2",
+      "root": "fixtures/rust",
+      "query": "select session client",
+      "required_files": [
+        "audio.rs"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.rs",
+          "name": "select_session",
+          "start_line": 3,
+          "end_line": 3
+        }
+      ]
+    },
+    {
+      "id": "rust-3",
+      "root": "fixtures/rust",
+      "query": "clamp configuration value",
+      "required_files": [
+        "audio.rs"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.rs",
+          "name": "clamp_config",
+          "start_line": 5,
+          "end_line": 5
+        }
+      ]
+    },
+    {
+      "id": "rust-4",
+      "root": "fixtures/rust",
+      "query": "validate frame",
+      "required_files": [
+        "audio.rs"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.rs",
+          "name": "validate_frame",
+          "start_line": 7,
+          "end_line": 7
+        }
+      ]
+    },
+    {
+      "id": "rust-5",
+      "root": "fixtures/rust",
+      "query": "build packet",
+      "required_files": [
+        "audio.rs"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.rs",
+          "name": "build_packet",
+          "start_line": 9,
+          "end_line": 9
+        }
+      ]
+    },
+    {
+      "id": "python-1",
+      "root": "fixtures/python",
+      "query": "route volume client",
+      "required_files": [
+        "audio.py"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.py",
+          "name": "route_volume",
+          "start_line": 1,
+          "end_line": 2
+        }
+      ]
+    },
+    {
+      "id": "python-2",
+      "root": "fixtures/python",
+      "query": "select session client",
+      "required_files": [
+        "audio.py"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.py",
+          "name": "select_session",
+          "start_line": 4,
+          "end_line": 5
+        }
+      ]
+    },
+    {
+      "id": "python-3",
+      "root": "fixtures/python",
+      "query": "clamp configuration value",
+      "required_files": [
+        "audio.py"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.py",
+          "name": "clamp_config",
+          "start_line": 7,
+          "end_line": 8
+        }
+      ]
+    },
+    {
+      "id": "python-4",
+      "root": "fixtures/python",
+      "query": "validate frame",
+      "required_files": [
+        "audio.py"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.py",
+          "name": "validate_frame",
+          "start_line": 10,
+          "end_line": 11
+        }
+      ]
+    },
+    {
+      "id": "python-5",
+      "root": "fixtures/python",
+      "query": "build packet",
+      "required_files": [
+        "audio.py"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.py",
+          "name": "build_packet",
+          "start_line": 13,
+          "end_line": 14
+        }
+      ]
+    },
+    {
+      "id": "typescript-1",
+      "root": "fixtures/typescript",
+      "query": "route volume client",
+      "required_files": [
+        "audio.ts"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ts",
+          "name": "routeVolume",
+          "start_line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "id": "typescript-2",
+      "root": "fixtures/typescript",
+      "query": "select session client",
+      "required_files": [
+        "audio.ts"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ts",
+          "name": "selectSession",
+          "start_line": 3,
+          "end_line": 3
+        }
+      ]
+    },
+    {
+      "id": "typescript-3",
+      "root": "fixtures/typescript",
+      "query": "clamp configuration value",
+      "required_files": [
+        "audio.ts"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ts",
+          "name": "clampConfig",
+          "start_line": 5,
+          "end_line": 5
+        }
+      ]
+    },
+    {
+      "id": "typescript-4",
+      "root": "fixtures/typescript",
+      "query": "validate frame",
+      "required_files": [
+        "audio.ts"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ts",
+          "name": "validateFrame",
+          "start_line": 7,
+          "end_line": 7
+        }
+      ]
+    },
+    {
+      "id": "typescript-5",
+      "root": "fixtures/typescript",
+      "query": "build packet",
+      "required_files": [
+        "audio.ts"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ts",
+          "name": "buildPacket",
+          "start_line": 9,
+          "end_line": 9
+        }
+      ]
+    },
+    {
+      "id": "go-1",
+      "root": "fixtures/go",
+      "query": "route volume client",
+      "required_files": [
+        "audio.go"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.go",
+          "name": "routeVolume",
+          "start_line": 3,
+          "end_line": 3
+        }
+      ]
+    },
+    {
+      "id": "go-2",
+      "root": "fixtures/go",
+      "query": "select session client",
+      "required_files": [
+        "audio.go"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.go",
+          "name": "selectSession",
+          "start_line": 5,
+          "end_line": 5
+        }
+      ]
+    },
+    {
+      "id": "go-3",
+      "root": "fixtures/go",
+      "query": "clamp configuration value",
+      "required_files": [
+        "audio.go"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.go",
+          "name": "clampConfig",
+          "start_line": 7,
+          "end_line": 7
+        }
+      ]
+    },
+    {
+      "id": "go-4",
+      "root": "fixtures/go",
+      "query": "validate frame",
+      "required_files": [
+        "audio.go"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.go",
+          "name": "validateFrame",
+          "start_line": 9,
+          "end_line": 9
+        }
+      ]
+    },
+    {
+      "id": "go-5",
+      "root": "fixtures/go",
+      "query": "build packet",
+      "required_files": [
+        "audio.go"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.go",
+          "name": "buildPacket",
+          "start_line": 11,
+          "end_line": 11
+        }
+      ]
+    },
+    {
+      "id": "java-1",
+      "root": "fixtures/java",
+      "query": "route volume client",
+      "required_files": [
+        "Audio.java"
+      ],
+      "required_symbols": [
+        {
+          "path": "Audio.java",
+          "name": "routeVolume",
+          "start_line": 2,
+          "end_line": 2
+        }
+      ]
+    },
+    {
+      "id": "java-2",
+      "root": "fixtures/java",
+      "query": "select session client",
+      "required_files": [
+        "Audio.java"
+      ],
+      "required_symbols": [
+        {
+          "path": "Audio.java",
+          "name": "selectSession",
+          "start_line": 4,
+          "end_line": 4
+        }
+      ]
+    },
+    {
+      "id": "java-3",
+      "root": "fixtures/java",
+      "query": "clamp configuration value",
+      "required_files": [
+        "Audio.java"
+      ],
+      "required_symbols": [
+        {
+          "path": "Audio.java",
+          "name": "clampConfig",
+          "start_line": 6,
+          "end_line": 6
+        }
+      ]
+    },
+    {
+      "id": "java-4",
+      "root": "fixtures/java",
+      "query": "validate frame",
+      "required_files": [
+        "Audio.java"
+      ],
+      "required_symbols": [
+        {
+          "path": "Audio.java",
+          "name": "validateFrame",
+          "start_line": 8,
+          "end_line": 8
+        }
+      ]
+    },
+    {
+      "id": "java-5",
+      "root": "fixtures/java",
+      "query": "build packet",
+      "required_files": [
+        "Audio.java"
+      ],
+      "required_symbols": [
+        {
+          "path": "Audio.java",
+          "name": "buildPacket",
+          "start_line": 10,
+          "end_line": 10
+        }
+      ]
+    },
+    {
+      "id": "arduino-1",
+      "root": "fixtures/arduino",
+      "query": "route volume client",
+      "required_files": [
+        "audio.ino"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ino",
+          "name": "route_volume",
+          "start_line": 3,
+          "end_line": 3
+        }
+      ]
+    },
+    {
+      "id": "arduino-2",
+      "root": "fixtures/arduino",
+      "query": "select session client",
+      "required_files": [
+        "audio.ino"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ino",
+          "name": "select_session",
+          "start_line": 5,
+          "end_line": 5
+        }
+      ]
+    },
+    {
+      "id": "arduino-3",
+      "root": "fixtures/arduino",
+      "query": "clamp configuration value",
+      "required_files": [
+        "audio.ino"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ino",
+          "name": "clamp_config",
+          "start_line": 7,
+          "end_line": 7
+        }
+      ]
+    },
+    {
+      "id": "arduino-4",
+      "root": "fixtures/arduino",
+      "query": "validate frame",
+      "required_files": [
+        "audio.ino"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ino",
+          "name": "validate_frame",
+          "start_line": 9,
+          "end_line": 9
+        }
+      ]
+    },
+    {
+      "id": "arduino-5",
+      "root": "fixtures/arduino",
+      "query": "build packet",
+      "required_files": [
+        "audio.ino"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ino",
+          "name": "build_packet",
+          "start_line": 11,
+          "end_line": 11
+        }
+      ]
+    }
+  ]
+}

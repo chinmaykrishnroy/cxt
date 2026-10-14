@@ -1,4 +1,6 @@
-# cxt 0.4: product direction
+# cxt: product direction
+
+Release update: 0.5.0 implements symbol/ranking/context/tokenizer, validated persistent static edges, MCP, portable agent skills and evaluation paths described in [engine contracts](CONTEXT_ENGINE.md). See [measured results and limits](IMPLEMENTATION_STATUS.md) for current evidence. The analysis below records the historical 0.4 baseline, not the current feature inventory. Compiler-complete resolution, zero-read querying, real-task success and category leadership remain unproven.
 
 Research date: 2026-10-13. Competitor capabilities below are documented, not independently benchmarked. The cxt baseline was checked against current source; this document is not a runtime or release validation.
 

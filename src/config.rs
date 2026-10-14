@@ -30,6 +30,15 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn for_args(args: &crate::cli::Args, cwd: &Path) -> Self {
+        if args.mcp {
+            // Agent requests use fixed server policy, never user/project overrides.
+            Self::default()
+        } else {
+            Self::load(cwd)
+        }
+    }
+
     pub fn load(cwd: &Path) -> Self {
         let mut merged = Self::default();
         if let Some(global) = global_config_file() {

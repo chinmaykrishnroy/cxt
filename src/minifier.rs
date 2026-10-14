@@ -5,16 +5,50 @@ pub fn redact_secrets(text: &str) -> String {
     security::redact_secrets(text).0
 }
 
-fn collect_comment_ranges(node: Node, ranges: &mut Vec<TsRange>) {
+fn collect_comment_ranges(node: Node, source: &str, ranges: &mut Vec<TsRange>) {
     let kind = node.kind();
     if kind == "comment" || kind == "line_comment" || kind == "block_comment" {
-        ranges.push(node.range());
+        if !preserve_comment(&source[node.byte_range()]) {
+            ranges.push(node.range());
+        }
+        return;
     }
     for i in 0..node.child_count() {
         if let Some(child) = node.child(i) {
-            collect_comment_ranges(child, ranges);
+            collect_comment_ranges(child, source, ranges);
         }
     }
+}
+
+fn preserve_comment(text: &str) -> bool {
+    if text.starts_with("///")
+        || text.starts_with("//!")
+        || (text.starts_with("/**") && text != "/**/")
+        || text.starts_with("/*!")
+    {
+        return true;
+    }
+    let lower = text.to_ascii_lowercase();
+    [
+        "@",
+        "type:",
+        "noqa",
+        "nolint",
+        "nosec",
+        "eslint",
+        "prettier",
+        "go:",
+        "coding",
+        "encoding",
+        "sourcemappingurl",
+        "sourceurl",
+        "copyright",
+        "license",
+        "istanbul",
+        "c8 ",
+    ]
+    .iter()
+    .any(|marker| lower.contains(marker))
 }
 
 fn remove_byte_ranges(text: &str, mut ranges: Vec<TsRange>) -> String {
@@ -38,6 +72,13 @@ fn remove_byte_ranges(text: &str, mut ranges: Vec<TsRange>) -> String {
     let mut last_end = 0;
     for r in merged {
         result.extend_from_slice(&bytes[last_end..r.start_byte]);
+        result.push(b' ');
+        result.extend(
+            bytes[r.start_byte..r.end_byte]
+                .iter()
+                .copied()
+                .filter(|b| matches!(b, b'\r' | b'\n')),
+        );
         last_end = r.end_byte;
     }
     result.extend_from_slice(&bytes[last_end..]);
@@ -50,20 +91,89 @@ pub fn strip_comments(text: &str, lang: Language) -> String {
         return text.to_string();
     }
     if let Some(tree) = parser.parse(text, None) {
+        if tree.root_node().has_error() {
+            return text.to_string();
+        }
         let mut ranges = Vec::new();
-        collect_comment_ranges(tree.root_node(), &mut ranges);
+        collect_comment_ranges(tree.root_node(), text, &mut ranges);
         remove_byte_ranges(text, ranges)
     } else {
         text.to_string()
     }
 }
 
+/// Grammarless input is preserved; callers with a known grammar use `minify_syntax`.
 pub fn minify_code(text: &str) -> String {
-    text.lines()
-        .map(str::trim_end)
-        .filter(|line| !line.trim().is_empty())
-        .collect::<Vec<_>>()
-        .join("\n")
+    // Without a grammar, whitespace may be literal content (or significant data).
+    text.to_string()
+}
+
+/// Conservative source compaction; invalid parses fall back to the original text.
+pub fn minify_syntax(text: &str, lang: Language) -> String {
+    let mut parser = TsParser::new();
+    if parser.set_language(lang).is_err() {
+        return text.to_string();
+    }
+    let Some(tree) = parser.parse(text, None) else {
+        return text.to_string();
+    };
+    if tree.root_node().has_error() {
+        return text.to_string();
+    }
+    let stripped = strip_comments(text, lang);
+    let Some(tree) = parser.parse(&stripped, None) else {
+        return text.to_string();
+    };
+    if tree.root_node().has_error() {
+        return text.to_string();
+    }
+    let mut protected = Vec::new();
+    collect_protected_ranges(tree.root_node(), &mut protected);
+    let mut out = String::with_capacity(stripped.len());
+    let mut offset = 0;
+    let mut protected_index = 0;
+    for line in stripped.split_inclusive('\n') {
+        let end = offset + line.len();
+        while protected
+            .get(protected_index)
+            .is_some_and(|r| r.end_byte <= offset)
+        {
+            protected_index += 1;
+        }
+        if protected
+            .get(protected_index)
+            .is_some_and(|r| r.start_byte < end)
+        {
+            out.push_str(line);
+        } else if !line.trim().is_empty() {
+            let body = line.trim_end_matches(['\r', '\n']);
+            out.push_str(body.trim_end_matches([' ', '\t']));
+            out.push_str(&line[body.len()..]);
+        }
+        offset = end;
+    }
+    out
+}
+
+fn collect_protected_ranges(node: Node, ranges: &mut Vec<TsRange>) {
+    let kind = node.kind();
+    if node.child_count() == 0
+        || kind.contains("string")
+        || kind.contains("template")
+        || kind.contains("literal")
+        || kind.contains("heredoc")
+        || kind.contains("comment")
+        || kind.starts_with("preproc")
+        || kind == "jsx_text"
+    {
+        ranges.push(node.range());
+        return;
+    }
+    for i in 0..node.child_count() {
+        if let Some(child) = node.child(i) {
+            collect_protected_ranges(child, ranges);
+        }
+    }
 }
 
 pub fn count_tokens(text: &str) -> usize {
@@ -93,8 +203,8 @@ mod tests {
     }
 
     #[test]
-    fn minify_blank_lines() {
+    fn grammarless_compaction_preserves_input() {
         let code = "fn a() {}\n   \n\nfn b() {}   \n";
-        assert_eq!(minify_code(code), "fn a() {}\nfn b() {}");
+        assert_eq!(minify_code(code), code);
     }
 }

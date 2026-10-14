@@ -34,6 +34,7 @@ enum Panel {
     Checks,
     Output,
     Settings,
+    Symbols,
 }
 const PANELS: &[Panel] = &[
     Panel::Source,
@@ -42,6 +43,7 @@ const PANELS: &[Panel] = &[
     Panel::Checks,
     Panel::Output,
     Panel::Settings,
+    Panel::Symbols,
 ];
 impl Panel {
     fn title(self) -> &'static str {
@@ -52,6 +54,7 @@ impl Panel {
             Self::Checks => "4 Checks",
             Self::Output => "5 Output",
             Self::Settings => "6 Settings",
+            Self::Symbols => "7 Symbols",
         }
     }
 }
@@ -61,8 +64,18 @@ enum Setting {
     Paths,
     Git,
     Query,
+    Ranker,
+    NoQueryExpansion,
     Budget,
     Model,
+    Context,
+    Symbol,
+    NoCache,
+    CacheDir,
+    Scanner,
+    SecretAllow,
+    WorkspaceRoot,
+    SkillAgent,
     Format,
     PathStyle,
     Secrets,
@@ -93,8 +106,18 @@ const SETTINGS: &[Setting] = &[
     Setting::Paths,
     Setting::Git,
     Setting::Query,
+    Setting::Ranker,
+    Setting::NoQueryExpansion,
     Setting::Budget,
     Setting::Model,
+    Setting::Context,
+    Setting::Symbol,
+    Setting::NoCache,
+    Setting::CacheDir,
+    Setting::Scanner,
+    Setting::SecretAllow,
+    Setting::WorkspaceRoot,
+    Setting::SkillAgent,
     Setting::Format,
     Setting::PathStyle,
     Setting::Secrets,
@@ -133,12 +156,18 @@ impl Setting {
                 "tracked",
             ],
             Self::Model => &["heuristic", "code", "gpt-5", "o200k", "cl100k"],
+            Self::Context => &["complete", "map", "focused", "adaptive"],
+            Self::Ranker => &["hybrid", "lexical", "symbols", "legacy"],
+            Self::Scanner => &["builtin", "gitleaks"],
+            Self::SkillAgent => &["generic", "codex", "claude", "antigravity", "devin", "kiro"],
             Self::Format => &["markdown", "xml", "json"],
             Self::PathStyle => &["relative", "absolute", "none"],
             Self::Secrets => &["redact", "fail", "allow"],
             Self::Destination => &["clipboard", "stdout", "file"],
             Self::Compression => &["none", "gzip", "zstd"],
             Self::Minify
+            | Self::NoCache
+            | Self::NoQueryExpansion
             | Self::Trace
             | Self::Impact
             | Self::Manifest
@@ -156,8 +185,18 @@ impl Setting {
             Self::Paths => "Input paths (; separated)",
             Self::Git => "Git selection",
             Self::Query => "Task query",
-            Self::Budget => "Estimated token budget",
+            Self::Ranker => "Query ranking strategy",
+            Self::NoQueryExpansion => "Disable query expansion",
+            Self::Budget => "Token budget",
             Self::Model => "Token profile",
+            Self::Context => "Context representation",
+            Self::Symbol => "AST symbol name (y)",
+            Self::NoCache => "Disable metadata cache",
+            Self::CacheDir => "Metadata cache directory",
+            Self::Scanner => "Secret scanner backend",
+            Self::SecretAllow => "Secret allowlist regexes (; separated)",
+            Self::WorkspaceRoot => "Restrict workspace root",
+            Self::SkillAgent => "Skill export agent (E)",
             Self::Format => "Output format",
             Self::PathStyle => "Path style",
             Self::Secrets => "Secret policy",
@@ -188,10 +227,18 @@ impl Setting {
     fn hint(self) -> &'static str {
         match self {
         Self::Git => "all, working, staged, unstaged, untracked, tracked, or a comparison such as main..HEAD",
-        Self::Budget | Self::MaxFiles => "Positive integer; 0 or empty means unlimited. Token profiles are estimates.",
+        Self::Budget | Self::MaxFiles => "Positive integer; 0 or empty means unlimited. cl100k/o200k count exact packet encoding tokens; other profiles estimate.",
         Self::Format => "markdown, xml, json", Self::PathStyle => "relative, absolute, none",
         Self::Secrets => "redact, fail, allow. Fail sanitizes the preview and blocks export when findings exist.",
-        Self::Model => "heuristic, code, gpt-5, o200k, cl100k (offline estimates)",
+        Self::Model => "cl100k/o200k count exact encoding tokens offline. heuristic/code/gpt-5 remain estimates, not billing guarantees.",
+        Self::Context => "complete: full files; map: signatures only; focused: selected AST spans/imports; adaptive: map fallback when implementation does not fit. Not proof of semantic completeness.",
+        Self::Ranker | Self::NoQueryExpansion => "Ablation controls: hybrid lexical/symbol/reference signals, lexical BM25, symbols-only, or legacy substring weights. Expansion is approximate, not a resolved call graph.",
+        Self::Symbol => "Named or qualified symbol; empty clears it. 7 shows symbols in the selected file. y opens this selector.",
+        Self::NoCache | Self::CacheDir => "Validated symbol/dependency metadata; source bodies are not persisted. Source and resolver inputs are rechecked. Empty directory uses the per-user cache.",
+        Self::Scanner => "builtin, or builtin plus separately installed Gitleaks. Scanner failures block export.",
+        Self::SecretAllow => "Explicit regex exceptions for known examples; broad allowlists can leak secrets. Separate rules with semicolons.",
+        Self::WorkspaceRoot => "Empty disables the explicit root restriction. Canonical source/dependency paths must remain within this directory.",
+        Self::SkillAgent => "Project-local skill location convention. E exports a static guide to a new file; no agent configuration is changed and no source is included.",
         Self::Destination => "clipboard, stdout, file. File requires an output filename.",
         Self::Compression => "none, gzip, zstd. Compression requires a file destination.",
         Self::OutputPath => "Filename relative to the launch directory; existing output files may be overwritten.",
@@ -221,6 +268,7 @@ enum Edit {
     Save,
     Load,
     Locate,
+    Skill,
 }
 struct Input {
     edit: Edit,
@@ -673,9 +721,29 @@ impl App {
                 .clone()
                 .unwrap_or_else(|| if a.diff { "working" } else { "all" }.into()),
             Setting::Query => a.query.clone().unwrap_or_default(),
+            Setting::Ranker => format!("{:?}", a.ranker).to_lowercase(),
+            Setting::NoQueryExpansion => a.no_query_expansion.to_string(),
             Setting::Budget => a.max_tokens.unwrap_or(0).to_string(),
             Setting::Model => a.model.clone().unwrap_or_else(|| "heuristic".into()),
+            Setting::Context => format!("{:?}", a.context).to_lowercase(),
+            Setting::Symbol => a.symbol.clone().unwrap_or_default(),
+            Setting::NoCache => a.no_cache.to_string(),
+            Setting::CacheDir => a
+                .cache_dir
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default(),
+            Setting::Scanner => format!("{:?}", a.secret_scanner).to_lowercase(),
+            Setting::SecretAllow => a.secret_allow.join("; "),
+            Setting::WorkspaceRoot => a
+                .workspace_root
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default(),
             Setting::Format => format!("{:?}", a.format.unwrap_or_default()).to_lowercase(),
+            Setting::SkillAgent => {
+                format!("{:?}", a.skill_agent.unwrap_or_default()).to_lowercase()
+            }
             Setting::PathStyle => format!("{:?}", a.path_style.unwrap_or_default()).to_lowercase(),
             Setting::Secrets => format!("{:?}", a.secrets.unwrap_or_default()).to_lowercase(),
             Setting::Minify => a.minify.to_string(),
@@ -722,6 +790,12 @@ impl App {
             Edit::Search => self.filter.clone(),
             Edit::Save | Edit::Load => ".cxt-task.json".into(),
             Edit::Locate => String::new(),
+            Edit::Skill => self
+                .args
+                .skill_agent
+                .unwrap_or_default()
+                .default_path()
+                .into(),
         };
         let cursor = text.len();
         self.input = Some(Input { edit, text, cursor });
@@ -765,9 +839,28 @@ impl App {
                 }
             }
             Setting::Query => args.query = (!value.is_empty()).then(|| value.into()),
+            Setting::Ranker => args.ranker = crate::query::Ranker::from_str(value, true)?,
+            Setting::NoQueryExpansion => args.no_query_expansion = boolean()?,
             Setting::Budget => args.max_tokens = Some(number()?.unwrap_or(0)),
             Setting::Model => args.model = Some(value.into()),
+            Setting::Context => args.context = crate::symbols::ContextLevel::from_str(value, true)?,
+            Setting::Symbol => args.symbol = (!value.is_empty()).then(|| value.into()),
+            Setting::NoCache => args.no_cache = boolean()?,
+            Setting::CacheDir => args.cache_dir = (!value.is_empty()).then(|| PathBuf::from(value)),
+            Setting::Scanner => {
+                args.secret_scanner = crate::security::SecretScanner::from_str(value, true)?
+            }
+            Setting::SecretAllow => args.secret_allow = split(';'),
+            Setting::WorkspaceRoot => {
+                args.workspace_root = (!value.is_empty()).then(|| PathBuf::from(value))
+            }
             Setting::Format => args.format = Some(OutputFormat::from_str(value, true)?),
+            Setting::SkillAgent => {
+                self.args.skill_agent = Some(crate::skill::SkillAgent::from_str(value, true)?);
+                self.status =
+                    "Skill location preference updated; press E to export the guide".into();
+                return Ok(());
+            }
             Setting::PathStyle => args.path_style = Some(PathStyle::from_str(value, true)?),
             Setting::Secrets => args.secrets = Some(SecretPolicy::from_str(value, true)?),
             Setting::Minify => {
@@ -861,6 +954,14 @@ impl App {
                 Ok(())
             }
             Edit::Locate => self.locate(&input.text),
+            Edit::Skill => {
+                if input.text.trim().is_empty() {
+                    Err("Choose a file path for the skill guide".into())
+                } else {
+                    crate::skill::export(&self.cwd, Some(Path::new(&input.text)), self.args.skill_agent.unwrap_or_default())
+                        .map(|path| self.status = format!("Skill exported: {}. Reload/import in your agent; no configuration changed.", path.display()))
+                }
+            }
             Edit::Save => self
                 .workspace
                 .as_ref()
@@ -908,7 +1009,11 @@ impl App {
             }
         }
         let target = PathBuf::from(path);
-        if self.args.minify && !numbers.is_empty() {
+        if (self.args.minify
+            || self.args.context != crate::symbols::ContextLevel::Complete
+            || self.args.symbol.is_some())
+            && !numbers.is_empty()
+        {
             return Err("Disable Minify in Settings for original-source line navigation; transformed line numbers differ".into());
         }
         let workspace = self
@@ -920,6 +1025,14 @@ impl App {
             return Err("Use an unambiguous file path within the current candidates; adjust paths/filters in Settings if needed".into());
         }
         let found = &found[0];
+        if !numbers.is_empty()
+            && workspace
+                .files
+                .iter()
+                .any(|f| &f.file.path == found && f.file.redactions > 0)
+        {
+            return Err("Redacted preview line numbers may differ; use original source spans rather than transformed line navigation".into());
+        }
         self.panel = Panel::Source;
         self.filter.clear();
         self.collapsed.clear();
@@ -944,14 +1057,16 @@ impl App {
             Panel::Checks => {
                 let mut text = vec![
                     "FINAL HANDOFF CHECKS".into(),
-                    "Offline token estimate includes rendered metadata.".into(),
+                    format!("Dependency index: {} reused / {} rebuilt / {} uncached", workspace.graph_stats.reused, workspace.graph_stats.rebuilt, workspace.graph_stats.uncacheable),
+                    "Packet token count includes rendered metadata; exact for cl100k/o200k, estimated for other profiles.".into(),
                     String::new(),
                 ];
                 if let Some(plan) = &self.plan {
                     if let Ok(result) = &plan.result {
                         text.push(format!(
-                            "Exports {} files / ~{} tokens / {} redactions",
+                            "Exports {} files / {}{} tokens / {} redactions",
                             result.packed_files.len(),
+                            if result.tokens_exact { "" } else { "~" },
                             result.estimated_tokens,
                             result.redactions
                         ));
@@ -990,6 +1105,14 @@ impl App {
                 };
                 if self.panel == Panel::Dependencies {
                     return workspace.relationships(&path).join("\n").into();
+                }
+                if self.panel == Panel::Symbols {
+                    return workspace.files.iter().find(|f| f.file.path == path).map(|f| {
+                        let mut rows = vec!["AST SYMBOLS — original source locations; y selects a name, Settings changes context level.".to_string()];
+                        rows.extend(f.symbols.iter().map(|s| format!("{}  lines {}–{}\n  {}\n", s.qualified_name, s.span.start_line, s.span.end_line, s.signature)));
+                        if f.symbols.is_empty() { rows.push("No symbols for this grammar/parse. Complete-source fallback is available.".into()); }
+                        Cow::Owned(rows.join("\n"))
+                    }).unwrap_or_else(|| "Select a file to inspect its symbols.".into());
                 }
                 if self.panel == Panel::Changes {
                     if let Some(change) = workspace.changes.iter().find(|c| c.path == path) {
@@ -1080,7 +1203,7 @@ pub fn run(args: &Args, cwd: &Path) -> Result<Option<TuiSelection>, String> {
                 }
                 match key.code {
                     KeyCode::Char('q') => return Ok(None),
-                    KeyCode::Char('1'..='6') => {
+                    KeyCode::Char('1'..='7') => {
                         if let KeyCode::Char(c) = key.code {
                             app.switch(PANELS[c as usize - '1' as usize]);
                         }
@@ -1093,11 +1216,13 @@ pub fn run(args: &Args, cwd: &Path) -> Result<Option<TuiSelection>, String> {
                     KeyCode::Char('?') => app.help = true,
                     KeyCode::Char('b') => app.edit(Edit::Setting(Setting::Budget)),
                     KeyCode::Char('e') => app.edit(Edit::Setting(Setting::Query)),
+                    KeyCode::Char('y') => app.edit(Edit::Setting(Setting::Symbol)),
                     KeyCode::Char('c') => app.edit(Edit::Setting(Setting::Git)),
                     KeyCode::Char('/') => app.edit(Edit::Search),
                     KeyCode::Char('F') => app.edit(Edit::Locate),
                     KeyCode::Char('S') => app.edit(Edit::Save),
                     KeyCode::Char('L') => app.edit(Edit::Load),
+                    KeyCode::Char('E') => app.edit(Edit::Skill),
                     KeyCode::Char('r') => app.load(),
                     KeyCode::Char('P') => app.pin(),
                     KeyCode::Char('U') if !app.busy => {
@@ -1296,8 +1421,9 @@ fn render(frame: &mut Frame, app: &mut App) {
         .and_then(|p| p.result.as_ref().ok())
         .map(|r| {
             format!(
-                "{} files / ~{} tokens / {} redactions",
+                "{} files / {}{} tokens / {} redactions",
                 r.packed_files.len(),
+                if r.tokens_exact { "" } else { "~" },
                 r.estimated_tokens,
                 r.redactions
             )
@@ -1518,9 +1644,9 @@ fn render(frame: &mut Frame, app: &mut App) {
         }
         frame.render_widget(paragraph, body[1]);
     }
-    frame.render_widget(Paragraph::new(vec![Line::from(Span::styled(app.status.clone(), Style::default().fg(Color::Yellow))), Line::from("Tab/1–6 views  Space select  P pin  c Git  e query  b budget  g export  ? help  q quit")]).wrap(Wrap { trim: false }), layout[2]);
+    frame.render_widget(Paragraph::new(vec![Line::from(Span::styled(app.status.clone(), Style::default().fg(Color::Yellow))), Line::from("Tab/1–7 views  Space select  P pin  e query  y symbol  b budget  g export  E skill  ? help  q quit")]).wrap(Wrap { trim: false }), layout[2]);
     if app.help {
-        popup(frame, "Keyboard & mouse", "Tab or 1–6: workflow views    o/F2: all settings\n↑↓ / j k: navigate    Enter/←→: fold directories\nSpace: select file/subtree    a/n: select all/none matching filter\nP: pin essential file (export blocked if it cannot fit)\n/: filter paths    e: task query    b: budget    c: Git selection\nw: focus preview    J/K: scroll    ←→: horizontal scroll when focused\nv: wrap preview    mouse wheel: scroll hovered pane\nF: locate file:line[:column] from a stack trace\nS: save task to a new filename    L: load task\nr: refresh sources    g: export exact final plan after freshness check\nClick tabs/settings/checkboxes. Paste is supported in input dialogs.\nEsc cancels a dialog; q exits. Token counts and test suggestions are estimates.");
+        popup(frame, "Keyboard & mouse", "Tab or 1–7: workflow views    o/F2: all settings\n↑↓ / j k: navigate    Enter/←→: fold directories\nSpace: select file/subtree    a/n: select all/none matching filter\nP: pin essential file (export blocked if it cannot fit)\n/: filter paths    e: task query    y: symbol    b: budget    c: Git selection\n7: original-source symbol catalog; context level is editable in Settings\nw: focus preview    J/K: scroll    ←→: horizontal scroll when focused\nv: wrap preview    mouse wheel: scroll hovered pane\nF: locate file:line[:column] in complete, unminified, unredacted source\nS: save task to a new filename    L: load task\nr: refresh sources    g: export exact final plan after freshness check\nClick tabs/settings/checkboxes. Paste is supported in input dialogs.\nEsc cancels a dialog; q exits. cl100k/o200k count exact packet tokens; test suggestions remain heuristic.");
     }
     if let Some(input) = &app.input {
         let (title, hint) = match input.edit {
@@ -1540,6 +1666,10 @@ fn render(frame: &mut Frame, app: &mut App) {
             Edit::Locate => (
                 "Locate failure",
                 "Paste file:line[:column], including Windows drive paths.",
+            ),
+            Edit::Skill => (
+                "Export agent SKILL.md",
+                "Choose a new file path. Agent preference is in Settings. Static guide only; existing files are never overwritten.",
             ),
         };
         popup(
@@ -1667,9 +1797,15 @@ mod tests {
                 assert!(screen.contains("cxt"));
                 assert!(screen.contains(panel.title().split_once(' ').unwrap().1));
             }
-            app.edit(Edit::Setting(Setting::Secrets));
-            terminal.draw(|frame| render(frame, &mut app)).unwrap();
-            app.input = None;
+            for edit in [
+                Edit::Setting(Setting::Secrets),
+                Edit::Setting(Setting::SkillAgent),
+                Edit::Skill,
+            ] {
+                app.edit(edit);
+                terminal.draw(|frame| render(frame, &mut app)).unwrap();
+                app.input = None;
+            }
         }
     }
 

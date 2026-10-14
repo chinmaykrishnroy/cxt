@@ -1,4 +1,5 @@
-use crate::resolver::resolve_import_path;
+use crate::dependency_index::ObservedPath;
+use crate::resolver::resolve_import_paths_scoped_checked;
 use std::collections::{HashSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -7,13 +8,13 @@ use tree_sitter::{Language, Node, Parser as TsParser};
 pub fn get_language(extension: &str) -> Option<Language> {
     match extension {
         "py" => Some(tree_sitter_python::language()),
-        "js" | "jsx" => Some(tree_sitter_javascript::language()),
-        "ts" => Some(tree_sitter_typescript::language_typescript()),
+        "js" | "jsx" | "mjs" | "cjs" => Some(tree_sitter_javascript::language()),
+        "ts" | "mts" | "cts" => Some(tree_sitter_typescript::language_typescript()),
         "tsx" => Some(tree_sitter_typescript::language_tsx()),
         "rs" => Some(tree_sitter_rust::language()),
         "go" => Some(tree_sitter_go::language()),
         "c" | "h" => Some(tree_sitter_c::language()),
-        "cpp" | "cc" | "cxx" | "hpp" => Some(tree_sitter_cpp::language()),
+        "cpp" | "cc" | "cxx" | "hpp" | "hh" | "hxx" | "ino" => Some(tree_sitter_cpp::language()),
         "java" => Some(tree_sitter_java::language()),
         "cs" => Some(tree_sitter_c_sharp::language()),
         "rb" => Some(tree_sitter_ruby::language()),
@@ -242,31 +243,58 @@ fn extract_imports_from_node(node: Node, source: &[u8], imports: &mut Vec<String
 }
 
 pub fn direct_dependencies(file: &Path) -> Vec<PathBuf> {
+    direct_dependencies_scoped(file, None)
+}
+
+pub fn direct_dependencies_scoped(file: &Path, scope: Option<&Path>) -> Vec<PathBuf> {
+    direct_dependencies_scoped_checked(file, scope).unwrap_or_default()
+}
+
+pub(crate) fn direct_dependencies_scoped_checked(
+    file: &Path,
+    scope: Option<&Path>,
+) -> Result<Vec<PathBuf>, String> {
+    if crate::scope::check(scope, file).is_err() {
+        return Ok(Vec::new());
+    }
+    let Ok(content) = fs::read_to_string(file) else {
+        return Ok(Vec::new());
+    };
+    dependencies_from_source(file, &content, scope)
+}
+
+pub(crate) fn dependencies_from_source(
+    file: &Path,
+    content: &str,
+    scope: Option<&Path>,
+) -> Result<Vec<PathBuf>, String> {
     let ext = file
         .extension()
         .unwrap_or_default()
         .to_string_lossy()
         .to_string();
     let Some(lang) = get_language(&ext) else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
 
-    let Ok(content) = fs::read_to_string(file) else {
-        return Vec::new();
-    };
     let mut parser = TsParser::new();
     if parser.set_language(lang).is_err() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
-    let Some(tree) = parser.parse(&content, None) else {
-        return Vec::new();
+    let Some(tree) = parser.parse(content, None) else {
+        return Ok(Vec::new());
     };
 
     if ext == "rs" {
-        return crate::rust_graph::dependencies(file, tree.root_node(), content.as_bytes())
-            .into_iter()
-            .map(|path| path.canonicalize().unwrap_or(path))
-            .collect();
+        return Ok(crate::rust_graph::dependencies(
+            file,
+            tree.root_node(),
+            content.as_bytes(),
+            scope,
+        )?
+        .into_iter()
+        .map(|path| path.observed_canonicalize().unwrap_or(path))
+        .collect());
     }
 
     let mut imports = Vec::new();
@@ -274,13 +302,13 @@ pub fn direct_dependencies(file: &Path) -> Vec<PathBuf> {
     let base_dir = file.parent().unwrap_or(Path::new(""));
     let mut resolved = HashSet::new();
     for import in imports {
-        if let Some(path) = resolve_import_path(base_dir, &import, &ext) {
-            resolved.insert(path.canonicalize().unwrap_or(path));
+        for path in resolve_import_paths_scoped_checked(base_dir, &import, &ext, scope)? {
+            resolved.insert(path.observed_canonicalize().unwrap_or(path));
         }
     }
     let mut paths: Vec<PathBuf> = resolved.into_iter().collect();
     paths.sort();
-    paths
+    Ok(paths)
 }
 
 pub fn trace_dependencies<F>(entry_file: &Path, mut on_discover: F) -> Vec<PathBuf>
@@ -292,8 +320,22 @@ where
 
 pub(crate) fn trace_dependencies_checked<F, C>(
     entry_file: &Path,
+    on_discover: F,
+    check: C,
+) -> Result<Vec<PathBuf>, String>
+where
+    F: FnMut(&Path),
+    C: FnMut(&Path) -> Result<bool, String>,
+{
+    trace_dependencies_checked_scoped(entry_file, on_discover, check, None, None)
+}
+
+pub(crate) fn trace_dependencies_checked_scoped<F, C>(
+    entry_file: &Path,
     mut on_discover: F,
     mut check: C,
+    scope: Option<&Path>,
+    index: Option<&crate::dependency_index::DependencyIndex>,
 ) -> Result<Vec<PathBuf>, String>
 where
     F: FnMut(&Path),
@@ -312,7 +354,11 @@ where
         if !check(&current_file)? {
             continue;
         }
-        for resolved in direct_dependencies(&current_file) {
+        let paths = match index {
+            Some(index) => index.resolve(&current_file, scope)?.paths,
+            None => direct_dependencies_scoped_checked(&current_file, scope)?,
+        };
+        for resolved in paths {
             let canonical = resolved.canonicalize().unwrap_or(resolved);
             if collected.insert(canonical.clone()) {
                 on_discover(&canonical);

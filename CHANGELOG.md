@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.5.0 (2026-10-14)
+
+- Ship a portable, comprehensive agent skill with CLI `--export-skill [FILE]`, agent-specific project locations, and TUI `E` export. Existing guides are never overwritten; no agent configuration is silently changed.
+- Refresh the GitHub README, SVG identity, live workflow badges and onboarding for CLI, TUI, MCP and skills. Task-aware retrieval remains experimental; public measurements do not establish downstream AI success or competitive superiority.
+
+- Add indexed AST definitions, original-source ranges, named-symbol selection, structural maps, focused implementations and adaptive map fallbacks.
+- Preserve export/default/variable declaration and Python decorator wrappers in focused symbol spans; invalidate old parser metadata.
+- Replace default query substring scoring with explainable BM25/path/symbol/reference signals; retain lexical/symbol/legacy ablation modes and an expansion-off control.
+- Count final rendered packets with offline cl100k/o200k encodings; keep heuristic profiles visibly estimated.
+- Reuse content-validated parser metadata in a per-user cache; support explicit cache locations and cache-free operation.
+- Persist static dependency edges with source/configuration/probe/directory validation; expose graph reuse counts and include resolver configuration in reverse-impact relationships.
+- Trace common local Go replacements and conservatively include Cargo target-specific local dependencies.
+- Fix source-subdirectory pruning when an explicitly selected project has a build/junk-named ancestor.
+- Add bounded, workspace-scoped, read-only stdio MCP tools for context, symbols, search, trace, changes, tests and maps. Agent requests cannot weaken policy or load cxt configuration overrides.
+- Add JSONC configuration inheritance, alias fallback targets, Node workspace package exports, Python parent imports, local Cargo path/workspace dependencies, Go workspace modules and Java standard source roots.
+- Treat Arduino `.ino` as C++ for static parsing; do not model the Arduino build/preprocessing toolchain.
+- Expand structured/provider credential detection, explicit example allowlists and an optional installed Gitleaks backend that fails closed.
+- Add a seventh TUI Symbols view and edit controls for representation, ranker, symbols, cache, scanner and workspace scope.
+- Add a bounded CLI evaluation runner, 30 synthetic tasks at three budgets, ranking ablations, source fingerprints, recall, latency and process-memory reporting. Downstream task success and competitor superiority remain unmeasured.
+- Add 30 pinned public bug-fix research candidates (two quarantined), a byte-preserving pre-fix materializer, original-span/hash verification, native Repomix comparison tooling and a generated incremental graph workload. Public labels remain provisional; measured retrieval is not downstream task success.
+
+- Preserve multiline literal bytes and token boundaries during syntax-aware compaction; leave unknown/invalid syntax unchanged and retain documentation/recognized directives.
+- Evaluate fail-policy detections on original source, compact parsed source before redaction, and preserve shared preview/export behavior when redaction markers are not valid syntax.
+- Size Markdown fences and inline delimiters dynamically to protect file boundaries and filenames containing backticks.
+- Preserve XML CR/LF/tab through character references and reject forbidden XML 1.0 characters before output delivery.
+- Add parser-backed source/export fidelity regressions and remove stale version text from the CLI guide.
+- Document new engine/MCP contracts, current limitations and verification requirements; retain published installation instructions separately from development-only features.
+
 ## 0.4.2 (2026-10-14)
 
 - Updated Git status pair iteration for compatibility with the latest Clippy lint without changing selection behavior.

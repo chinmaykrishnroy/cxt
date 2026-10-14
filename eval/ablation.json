@@ -1,0 +1,116 @@
+{
+  "schema": "cxt.eval.v1",
+  "dataset_kind": "synthetic ranking ablations, not downstream task success",
+  "budgets": [
+    8000
+  ],
+  "max_files": 1,
+  "query_expansion": [true, false],
+  "rankers": [
+    "hybrid",
+    "lexical",
+    "symbols",
+    "legacy"
+  ],
+  "contexts": [
+    "focused"
+  ],
+  "tasks": [
+    {
+      "id": "rust-routing-ablation",
+      "root": "fixtures/rust",
+      "query": "route volume client",
+      "required_files": [
+        "audio.rs"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.rs",
+          "name": "route_volume",
+          "start_line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "id": "python-routing-ablation",
+      "root": "fixtures/python",
+      "query": "route volume client",
+      "required_files": [
+        "audio.py"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.py",
+          "name": "route_volume",
+          "start_line": 1,
+          "end_line": 2
+        }
+      ]
+    },
+    {
+      "id": "typescript-routing-ablation",
+      "root": "fixtures/typescript",
+      "query": "route volume client",
+      "required_files": [
+        "audio.ts"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ts",
+          "name": "routeVolume",
+          "start_line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "id": "go-routing-ablation",
+      "root": "fixtures/go",
+      "query": "route volume client",
+      "required_files": [
+        "audio.go"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.go",
+          "name": "routeVolume",
+          "start_line": 3,
+          "end_line": 3
+        }
+      ]
+    },
+    {
+      "id": "java-routing-ablation",
+      "root": "fixtures/java",
+      "query": "route volume client",
+      "required_files": [
+        "Audio.java"
+      ],
+      "required_symbols": [
+        {
+          "path": "Audio.java",
+          "name": "routeVolume",
+          "start_line": 2,
+          "end_line": 2
+        }
+      ]
+    },
+    {
+      "id": "arduino-routing-ablation",
+      "root": "fixtures/arduino",
+      "query": "route volume client",
+      "required_files": [
+        "audio.ino"
+      ],
+      "required_symbols": [
+        {
+          "path": "audio.ino",
+          "name": "route_volume",
+          "start_line": 3,
+          "end_line": 3
+        }
+      ]
+    }
+  ]
+}

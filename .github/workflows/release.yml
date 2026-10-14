@@ -7,14 +7,40 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  validate:
+    name: Validate release source
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Validate package version and release tag
+        id: version
+        shell: bash
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "This workflow publishes stable versions only; finalize the development version first."; exit 1; }
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            test "$version" = "${GITHUB_REF_NAME#v}" || { echo "Release tag must match Cargo.toml version."; exit 1; }
+            test -f "docs/releases/$GITHUB_REF_NAME.md" || { echo "Add versioned release notes before tagging."; exit 1; }
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - run: cargo fmt -- --check
+      - run: cargo test --locked --all-targets
+      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
+
   build:
     name: Build ${{ matrix.target }}
+    needs: validate
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -62,10 +88,25 @@ jobs:
           arch: ${{ matrix.msvc_arch }}
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --locked --release --target ${{ matrix.target }}
+
+      - name: Smoke test native binary
+        shell: bash
+        run: |
+          host="$(rustc -vV | sed -n 's/^host: //p')"
+          if [ "$host" = "${{ matrix.target }}" ]; then
+            cargo test --locked --all-targets --target "${{ matrix.target }}"
+            cargo run --locked --release --target "${{ matrix.target }}" -- --help
+            cargo run --locked --release --target "${{ matrix.target }}" -- --export-skill target/skill-smoke/SKILL.md --skill-agent codex
+            cargo run --locked --release --target "${{ matrix.target }}" -- --evaluate eval/ablation.json --output target/ablation-report.json
+          else
+            echo "Cross-compiled asset; runtime validation requires the target platform."
+          fi
 
       - name: Package
         shell: bash
+        env:
+          CXT_PACKAGE_VERSION: ${{ needs.validate.outputs.version }}
         run: |
           mkdir -p dist
           exe="target/${{ matrix.target }}/release/cxt"
@@ -91,15 +132,15 @@ jobs:
               mkdir -p "$deb_root/DEBIAN" "$deb_root/usr/bin"
               cp "dist/cxt-${{ matrix.target }}" "$deb_root/usr/bin/cxt"
               chmod 755 "$deb_root/usr/bin/cxt"
-              printf 'Package: cxt\nVersion: %s\nSection: utils\nPriority: optional\nArchitecture: %s\nMaintainer: Chinmay Krishn Roy\nDescription: Fast AST-aware context packer for LLMs\n' "${GITHUB_REF_NAME#v}" "$deb_arch" > "$deb_root/DEBIAN/control"
-              dpkg-deb --build "$deb_root" "dist/cxt_${GITHUB_REF_NAME#v}_${deb_arch}.deb"
+              printf 'Package: cxt\nVersion: %s\nSection: utils\nPriority: optional\nArchitecture: %s\nMaintainer: Chinmay Krishn Roy\nDescription: Fast AST-aware context packer for LLMs\n' "$CXT_PACKAGE_VERSION" "$deb_arch" > "$deb_root/DEBIAN/control"
+              dpkg-deb --build "$deb_root" "dist/cxt_${CXT_PACKAGE_VERSION}_${deb_arch}.deb"
               rm -rf "$deb_root"
             fi
             rm "dist/cxt-${{ matrix.target }}"
           fi
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: cxt-${{ matrix.target }}
           path: dist/*
@@ -107,6 +148,8 @@ jobs:
 
   release:
     name: Create Release
+    permissions:
+      contents: write
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
@@ -114,7 +157,7 @@ jobs:
       - name: Checkout installer scripts
         uses: actions/checkout@v5
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
@@ -127,11 +170,14 @@ jobs:
         run: |
           cp install.sh dist/cxt-installer.sh
           cp install.ps1 dist/install.ps1
+          cp skills/cxt/SKILL.md dist/cxt-SKILL.md
           (cd dist && sha256sum * > SHA256SUMS.txt)
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*
+          fail_on_unmatched_files: true
+          body_path: docs/releases/${{ github.ref_name }}.md
           generate_release_notes: true
 

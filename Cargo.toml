@@ -1,6 +1,6 @@
 [package]
 name = "cxt-ai"
-version = "0.4.2"
+version = "0.5.0"
 edition = "2021"
 description = "Fast, code-aware context engine for coding agents and LLMs"
 authors = ["Chinmay Krishn Roy"]
@@ -53,3 +53,10 @@ sha2 = "0.10"
 ratatui = "0.30.2"
 crossterm = "0.29.0"
 indicatif = "0.18.6"
+tiktoken-rs = "0.12.1"
+tempfile = "3.23"
+json5 = "0.4"
+
+[dev-dependencies]
+pulldown-cmark = { version = "0.13.4", default-features = false }
+roxmltree = "0.21.1"

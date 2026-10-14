@@ -10,6 +10,30 @@ fn packed_file_count(output_md: &str) -> usize {
 }
 
 #[test]
+fn explicit_project_beneath_build_directory_keeps_sources_and_skips_its_own_junk() {
+    let directory = temp_dir("nested-project");
+    let root = directory.join("target/project");
+    write_file(
+        &root,
+        "src/main.rs",
+        "fn main() { println!(\"nested project\"); }\n",
+    );
+    write_file(&root, "target/generated.rs", "fn generated() {}\n");
+    let output = run_cxt(
+        &directory,
+        &[root.to_str().unwrap(), "--format", "json", "--stdout"],
+    );
+    assert_success(&output);
+    let packet: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let files = packet["files"].as_array().unwrap();
+    assert_eq!(files.len(), 1);
+    assert_eq!(
+        files[0]["path"].as_str().unwrap().replace('\\', "/"),
+        "src/main.rs"
+    );
+}
+
+#[test]
 fn scripted_stdout_contains_only_context_without_progress() {
     let dir = temp_dir("progress-stdout");
     write_file(&dir, "main.rs", "fn main() {}\n");

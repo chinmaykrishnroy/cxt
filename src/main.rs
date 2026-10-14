@@ -14,11 +14,66 @@ use std::time::Duration;
 
 fn main() {
     let parsed = Args::parse();
+    if let Some(destination) = &parsed.export_skill {
+        let result = std::env::current_dir()
+            .map_err(|e| format!("read current directory: {e}"))
+            .and_then(|cwd| {
+                cxt_core::skill::export(
+                    &cwd,
+                    destination.as_deref(),
+                    parsed.skill_agent.unwrap_or_default(),
+                )
+            });
+        match result {
+            Ok(path) => eprintln!("[cxt] Exported agent skill to {}. Keep cxt on PATH; reload/import the skill in your agent as needed. No agent configuration was changed.", path.display()),
+            Err(error) => {
+                eprintln!("[cxt] {error}");
+                std::process::exit(3);
+            }
+        }
+        return;
+    }
+    if parsed.skill_agent.is_some() && !parsed.tui {
+        eprintln!("[cxt] --skill-agent requires --export-skill or --tui");
+        std::process::exit(2);
+    }
     if let Some(shell) = parsed.completions {
         Args::write_completions(shell);
         return;
     }
     let mut args = parsed.normalized();
+    if let Some(corpus) = &args.evaluate {
+        let result = std::env::current_exe()
+            .map_err(|e| e.to_string())
+            .and_then(|exe| {
+                cxt_core::evaluation::evaluate(corpus, &exe, args.eval_baseline.as_deref())
+            });
+        match result {
+            Ok(report) => {
+                let json = serde_json::to_string_pretty(&report).unwrap();
+                if let Some(path) = &args.output {
+                    if let Err(error) = fs::write(path, json) {
+                        eprintln!("[cxt] evaluation output: {error}");
+                        std::process::exit(3);
+                    }
+                } else {
+                    println!("{json}");
+                }
+            }
+            Err(error) => {
+                eprintln!("[cxt] evaluation: {error}");
+                std::process::exit(2);
+            }
+        }
+        return;
+    }
+    if args.mcp {
+        if let Err(error) = cxt_core::mcp::serve(&args) {
+            eprintln!("[cxt] MCP: {error}");
+            std::process::exit(2);
+        }
+        return;
+    }
     let cwd = match std::env::current_dir() {
         Ok(cwd) => cwd,
         Err(e) => {
@@ -298,8 +353,9 @@ fn print_skipped_details(result: &EngineResult) {
 
 fn print_summary(args: &Args, result: &EngineResult, destination: &Delivery) {
     let summary = format!(
-        "[cxt] packed {} files, ~{} tokens, {} redactions, {} skipped ({} by budget)",
+        "[cxt] packed {} files, {}{} tokens, {} redactions, {} skipped ({} by budget)",
         result.packed_files.len(),
+        if result.tokens_exact { "" } else { "~" },
         result.estimated_tokens,
         result.redactions,
         result.skipped_files,

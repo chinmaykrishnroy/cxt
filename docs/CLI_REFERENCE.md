@@ -1,4 +1,4 @@
-# cxt 0.4.1 user guide and CLI reference
+# cxt user guide and CLI reference
 
 cxt (short for **context**) builds reviewable code context locally. It selects files, resolves supported imports, ranks task keywords, applies safety/secret rules and renders Markdown, XML or JSON. It does not call an LLM or upload source. Clipboard contents and exported files can contain sensitive data; inspect them before sharing.
 
@@ -27,7 +27,7 @@ cxt --query 'power shutdown audio activity' --budget 20000 --tui
 cxt PowerManager.cpp --trace --output context.md
 ```
 
-Arduino `.ino` files can be packed/searched as text, but currently lack AST tracing/comment stripping. A C/C++ header does not automatically pull in its paired implementation file. Include necessary `.cpp` files explicitly.
+Arduino `.ino` files use the C++ grammar for symbols, local includes and conservative compaction. Arduino preprocessing, generated prototypes and build flags are not modeled. A C/C++ header does not automatically pull in its paired implementation file; include necessary `.cpp` files explicitly.
 
 ## All parameters
 
@@ -43,7 +43,10 @@ Arduino `.ino` files can be packed/searched as text, but currently lack AST trac
 | `--git MODE_OR_RANGE` | Select checkout files using `working`, `staged`, `unstaged`, `untracked`, `tracked`, or a comparison such as `HEAD~3..HEAD` / `main...HEAD`. Requires a Git repository. Selection is repository-wide, not scoped by additional path arguments; narrow it with filters. |
 | `--impact` | Requires `--git` or `--diff`. Add resolved reverse dependencies up to two hops and filename-related tests. Suggestions are heuristic, not complete coverage or runtime call graphs. |
 | `-t`, `--trace` | Follow supported local static imports from explicit file inputs. Directory inputs are scanned normally; supply entry files to trace. Unsupported/external/dynamic relationships may be missed. |
-| `--query TEXT` | Local lexical path/content ranking and dependency expansion from strong matches. Not semantic search. Defaults to at most 40 candidates; `--max-files` overrides that cap. |
+| `--query TEXT` | Local BM25/path/symbol ranking and approximate reference/import expansion from strong matches. Not semantic search. Defaults to at most 40 candidates; `--max-files` overrides that cap. |
+| `--ranker STRATEGY` | `hybrid` (default), `lexical` (BM25 + paths), `symbols` (names only), `legacy` (substring weights). Reasons expose active signals. These are experimental ablation controls, not learned optimal weights. |
+| `--no-query-expansion` | Disable automatic import/reference expansion for the query. Explicit `--impact` remains independent. |
+| `--symbol NAME` | Match an AST name or qualified name (e.g. `Audio::setVolume`). Limits candidates to matching definitions, retains their implementations/imports, and never truncates a named implementation to fit. Failure to fit can exclude it; inspect the final packet. |
 
 Git mode selects names from the requested revision/staging comparison, but exported source comes from the **current checkout**, not historical or staged blobs. Deleted paths appear as patches in TUI Changes rather than source files in the packet. TUI Changes uses its chosen Git comparison, or `working` when no mode is set.
 
@@ -82,10 +85,11 @@ Directory walks respect applicable Git ignore rules. Sensitive credential files,
 
 | Parameter | What it does |
 | --- | --- |
-| `-m`, `--minify` | Strip recognized AST comments and blank lines. This changes source line positions and may remove useful documentation; inspect the result. |
+| `-m`, `--minify` | Conservatively remove ordinary AST comments and blank lines outside protected syntax. Preserve literal bytes, comment token separators/newlines, documentation and recognized tool directives. Unsupported languages and parse-error inputs remain unchanged. Line positions can change; inspect the result. This is not a universal executable-equivalence guarantee. |
 | `--no-minify` | Disable minification, including a configured default. Conflicts with `--minify`. |
-| `--model MODEL` | Offline token estimate profile: `heuristic` (default), `code`, `gpt-5`, `o200k`, `cl100k`. Recognized aliases exist; unknown names fall back to the heuristic ratio. No model is called. |
-| `--max-tokens TOKENS`, `--budget TOKENS` | Enforce an **estimated** final-document token budget, including rendered metadata. Whole files are dropped until it fits. No default budget; `0` overrides configuration with unlimited estimated tokens. Not an exact tokenizer or billing guarantee. |
+| `--model MODEL` | Offline token accounting: `cl100k` / `cl100k_base` and `o200k` / `o200k_base` use exact named encodings. `heuristic` (default), `code`, `gpt-5` and unknown names use character-ratio estimates. No model is called; packet tokens do not include chat envelopes or predict billing. |
+| `--max-tokens TOKENS`, `--budget TOKENS` | Enforce the final rendered packet budget, including metadata. Exact under named encodings, estimated otherwise. No default budget; `0` disables it. Complete mode drops files; focused/adaptive modes first choose bounded AST units and then verify final rendering. |
+| `--context LEVEL` | `complete` (default): whole selected files. `map`: symbol names/signatures/locations, **not implementation**. `focused`: selected source spans and imports. `adaptive`: focused spans with signature-map fallback when implementation cannot fit. Unknown/invalid syntax or unmatched task text falls back to complete source rather than inventing code. |
 | `--max-files N` | Cap candidates after selection/ranking/filtering, before final token budgeting. Query default is 40; otherwise no cap. `0` disables the cap. This does not reduce enumeration work; scan caps are separate. |
 
 ### Output
@@ -102,6 +106,10 @@ Directory walks respect applicable Git ignore rules. Sensitive credential files,
 
 If clipboard access fails, cxt attempts a **new** `cxt-output.md`, `.xml` or `.json` in the launch directory. It reports this actual destination and refuses to overwrite an existing fallback. If neither destination works, exit code is `3`; use an explicit output filename or stdout. Clipboard availability depends on your desktop/session.
 
+Markdown fences grow beyond the longest source backtick run; path/query inline delimiters also adapt. Markdown presentation can normalize line endings and adds a separator newline around file blocks: use JSON for exact transformed-content recovery. XML escapes delimiters and uses character references for CR/LF/tab, but rejects XML 1.0-forbidden characters before delivery with exit code `2`; use JSON rather than silently dropping them. Secret redaction and opt-in compaction deliberately transform source. Neither secret detection nor minification is a universal safety/equivalence guarantee.
+
+Detected-secret counts and fail-policy checks inspect the original source before compaction. Compaction parses that source; exported content is then redacted, so replacement markers cannot disrupt parsing. A secret in an ordinary comment can disappear through compaction, but its detection still blocks fail-policy export. Redaction counts describe replacements remaining in exported content, not every detection in the original file.
+
 ```bash
 cxt --format json --manifest --output context.json.zst --compression zstd
 cxt --stdout > context.md
@@ -115,6 +123,11 @@ Shell redirection opens its destination before cxt executes: the redirected file
 | Parameter | What it does |
 | --- | --- |
 | `--secrets POLICY` | `redact` (default), `fail`, `allow`. Best-effort pattern detection: redact masks matches; fail blocks export when findings exist but sanitizes TUI previews; allow explicitly preserves raw matches. Not all secrets are detectable. |
+| `--secret-scanner BACKEND` | `builtin` (default), or `gitleaks`: built-in patterns plus a separately installed Gitleaks executable on PATH. Gitleaks receives selected source locally over stdin; timeout, malformed reports or scanner failure block export. Detected external findings mask whole affected lines. |
+| `--secret-allow REGEX` | Explicit exception matching a known example finding; repeatable. Invalid regex blocks export. Broad expressions can bypass protection; do not use blanket allowlists. |
+| `--no-cache` | Disable persistent symbol/dependency metadata reuse. Source is always reread and SHA-256 checked; resolver inputs are also validated before edge reuse. |
+| `--cache-dir DIR` | Override the default per-user `cxt` cache directory's `symbols` subdirectory. Stores parser metadata and a `dependencies/` edge cache, not source bodies. Paths, signatures and metadata can still be sensitive; see [engine design](CONTEXT_ENGINE.md). |
+| `--workspace-root DIR` | Require source reads and resolver configuration reads to remain within this canonical directory, including symlink targets. Configurations outside it are ignored. This is an application check, not an atomic OS sandbox against concurrent filesystem mutation. |
 | `--no-limit` | Bypass per-file size and generated/junk/sensitive-file exclusion rules. Custom include/ignore rules and binary detection remain. Does not bypass scan caps or the broad-folder guard. Use cautiously. |
 | `--allow-broad-scan` | Explicit permission for home-directory, home-ancestor and filesystem-root scans. Off by default; these paths are refused before traversal. Scan caps still apply. Saved tasks can retain permission; review their options before loading them. |
 | `--scan-max-entries N` | Maximum visited entries per traversal phase / unique processed files per processing phase. Default 20,000; `0` disables it. |
@@ -130,13 +143,23 @@ cxt /path/to/project --scan-max-entries 50000 --scan-max-mb 200 --scan-timeout 6
 
 Prefer a project path over broad-folder permission. `--dry-run` still performs selection, transformation and budgeting; it is not a free/metadata-only scan.
 
-### Review and scripting
+### Agent integration
+
+| Parameter | What it does |
+| --- | --- |
+| `--export-skill [FILE]` | Export the bundled portable SKILL.md, without scanning or loading project configuration. Default `cxt-skill/SKILL.md`; creates parents and refuses all overwrites. Explicit FILE wins over agent defaults. Exit 3 on write failure. Conflicts with context delivery, TUI, MCP, evaluation, completions and explicit input paths. |
+| `--skill-agent AGENT` | `generic`, `codex`, `claude`, `antigravity`, `devin`, `kiro`. Requires `--export-skill` or `--tui`; selects the project-local discovery convention, not agent configuration or marketplace registration. In TUI this is the initial export preference. See [agent skill guide](AGENT_SKILL.md). |
+
+### Review and scripting options
 
 | Parameter | What it does |
 | --- | --- |
 | `--dry-run` | Report final packed files, reasons, estimated tokens and exclusions without copying/writing context. In TUI, preview/review still runs; exporting returns the dry-run report. |
 | `--ci` | No clipboard fallback; use stdout when no output filename is supplied. Progress animation is suppressed. Conflicts with `--clipboard`. It does not imply `--secrets fail`. |
-| `-T`, `--tui` | Interactive review with Source, Changes, Dependencies, Checks, Output and Settings. Requires terminal stdin/stdout. Quit without export with `q`; export with `g`. |
+| `-T`, `--tui` | Interactive review with Source, Changes, Dependencies, Checks, Output, Settings and Symbols. Requires terminal stdin/stdout. Quit without export with `q`; export with `g`. |
+| `--mcp` | Serve read-only stdio MCP tools for exactly one explicit workspace directory, e.g. `cxt --mcp ./project`. Fixed redaction, workspace scope and request caps; no HTTP listener, model call, output writes or cache writes. See [MCP guide](MCP.md). |
+| `--evaluate CORPUS` | Run a versioned local labeled retrieval corpus in bounded CLI child processes; JSON report to stdout or `--output`. See [evaluation protocol](EVALUATION.md). This is not an AI task-success experiment. |
+| `--eval-baseline EXE` | Optional **trusted** older cxt executable, requires `--evaluate`. It is executed locally for comparison. The corpus cannot specify executable paths. |
 | `--completions SHELL` | Generate completions for `bash`, `elvish`, `fish`, `powershell`, `zsh` and exit without scanning. Load the emitted script using your shell's usual completion mechanism. |
 | `-h`, `--help` | Show all parameters, examples and safety summary; long form expands descriptions. No scanning. |
 | `-V`, `--version` | Show this executable's version and exit without scanning. |
@@ -147,13 +170,16 @@ Prefer a project path over broad-folder permission. `--dry-run` still performs s
 2. In **Source**, inspect transformed source; Space toggles files/subtrees. `P` pins essentials; `U` clears pins. Pinning prioritizes files but does not exceed the budget.
 3. Inspect **Changes** and **Dependencies** for relevant patches/imports/dependents/tests. These are static/heuristic relationships, not proof that every dependency is included.
 4. Inspect **Checks** for missing resolved imports, suggested tests, secret findings, skipped inputs and budget exclusions. Export is blocked for secret fail-policy findings, unavailable/omitted pinned files or a failed plan/scan.
-5. Review **Output**: this is the transformed packet, including final metadata and estimated budget overhead.
+5. Review **Output**: this is the transformed packet, including final metadata and budget overhead. Counts are exact for named encodings and visibly estimated otherwise.
 6. Use **Settings** (`6`, `o` or F2) to edit inputs, query, Git mode, budgets, all scan limits, filters, transformations and delivery. Enter/click edits; Ctrl+u clears; arrows choose enum/boolean values.
-7. Press `g` to export. Changed selected sources or Git HEAD require `r` to refresh first. Failed scans cannot reuse a previous workspace to export.
+7. Use **Symbols** (`7`) to inspect definitions and original locations. `y` edits the requested symbol; context/ranker/cache/scanner/scope options are in Settings.
+8. Press `g` to export. Changed selected sources or Git HEAD require `r` to refresh first. Failed scans cannot reuse a previous workspace to export.
 
-Additional controls: Tab / `1`–`6` changes views; `/` filters paths; `a` / `n` selects all/none matching the path filter; `e` edits query; `b` budget; `c` Git mode (`all` disables Git selection). `w` focuses preview, `v` wraps it, J/K scroll, `F` locates `file:line[:column]`. Disable minification for original-source line navigation. Mouse navigation and paste are supported. Minimum terminal is 52 × 15.
+Additional controls: Tab / `1`–`7` changes views; `/` filters paths; `a` / `n` selects all/none matching the path filter; `e` edits query; `b` budget; `c` Git mode (`all` disables Git selection). `w` focuses preview, `v` wraps it, J/K scroll, `F` locates `file:line[:column]`. Original-source navigation requires complete, unminified, unredacted content. Mouse navigation and paste are supported. Minimum terminal is 52 × 15.
 
 `S` / `L` saves/loads task options, selected/pinned paths and source fingerprints—not source contents. Save under `.cxt-task*.json`; an existing task is not overwritten. Restored files can be changed/unavailable; inspect Checks. Saving a task is not an encrypted storage mechanism and can retain query text, paths and security/broad-scan options.
+
+`E` exports the static agent SKILL.md to an editable filename; choose **Skill export agent** in Settings for the next project-local default. It creates a new file only, never source context or agent configuration. This action is independent of scan success; `g` still enforces all context-export gates.
 
 ## Configuration and precedence
 
@@ -177,7 +203,7 @@ Supported configuration keys:
 | `scan_max_depth` | 32; `0` disables this cap. |
 | `scan_timeout` | 15 seconds; `0` disables this cap. |
 
-Broad-scan permission is deliberately not a configuration key. Start from [the configuration example](../.cxt.toml.example), remove filters you do not want, and inspect selection with `--dry-run`.
+Broad-scan permission is deliberately not a configuration key. New context/ranker/cache/scanner/scope options are CLI/TUI options, not additional TOML keys; saved TUI tasks retain them. Start from [the configuration example](../.cxt.toml.example), remove filters you do not want, and inspect selection with `--dry-run`.
 
 ## Installation and troubleshooting
 

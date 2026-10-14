@@ -28,7 +28,7 @@ impl Default for ScanLimits {
 
 impl ScanLimits {
     pub fn for_args(args: &Args, cwd: &Path) -> Self {
-        let config = Config::load(cwd);
+        let config = Config::for_args(args, cwd);
         let defaults = Self::default();
         Self {
             max_entries: args
@@ -169,10 +169,16 @@ pub(crate) fn walk_files(
         // Inspect one extra level to report truncation rather than silently omit it.
         walker.max_depth(Some(depth.saturating_add(1)));
     }
+    let scan_root = root.to_path_buf();
     walker.filter_entry(move |entry| {
         no_limit
             || !entry.file_type().is_some_and(|t| t.is_dir())
-            || !filter::is_junk_path(entry.path())
+            || !filter::is_junk_path(
+                entry
+                    .path()
+                    .strip_prefix(&scan_root)
+                    .unwrap_or(entry.path()),
+            )
     });
     let mut result = Files {
         paths: Vec::new(),
@@ -219,21 +225,41 @@ pub(crate) fn walk_files(
 pub(crate) struct Graph {
     pub dependencies: BTreeMap<PathBuf, Vec<PathBuf>>,
     pub warnings: Vec<String>,
+    pub stats: crate::dependency_index::GraphStats,
 }
 
 pub(crate) fn graph(root: &Path, args: &Args, cwd: &Path) -> Result<Graph, String> {
     let files = walk_files(root, args, cwd, true)?;
     let mut budget = ScanBudget::new(ScanLimits::for_args(args, cwd));
     let mut dependencies = BTreeMap::new();
+    let index = crate::dependency_index::DependencyIndex::for_args(args, cwd);
+    let mut stats = crate::dependency_index::GraphStats::default();
     for path in files.paths {
+        let scope = args.workspace_root.as_ref().map(|p| {
+            if p.is_absolute() {
+                p.clone()
+            } else {
+                cwd.join(p)
+            }
+        });
+        crate::scope::check(scope.as_deref(), &path)?;
         budget.read_file(&path)?;
         let path = path.canonicalize().unwrap_or(path);
-        dependencies.insert(path.clone(), tracer::direct_dependencies(&path));
+        let resolved = index.resolve(&path, scope.as_deref())?;
+        stats.reused += usize::from(resolved.cache_hit);
+        stats.rebuilt += usize::from(!resolved.cache_hit);
+        stats.uncacheable += usize::from(!resolved.cacheable);
+        let mut edges = resolved.paths;
+        edges.extend(resolved.configuration_inputs);
+        edges.sort();
+        edges.dedup();
+        dependencies.insert(path.clone(), edges);
     }
     budget.check_time()?;
     Ok(Graph {
         dependencies,
         warnings: files.warnings,
+        stats,
     })
 }
 

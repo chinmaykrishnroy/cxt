@@ -3,13 +3,13 @@ use crate::config::Config;
 use crate::filter::FileFilter;
 use crate::git;
 use crate::impact;
-use crate::minifier::{minify_code, strip_comments};
+use crate::minifier::minify_syntax;
 use crate::output::{self, OutputFormat, PackedFile, PathStyle, RenderOptions};
 use crate::query;
 use crate::security::{self, SecretPolicy};
 use crate::selection::{self, Candidate};
 use crate::token::TokenCounter;
-use crate::tracer::{get_language, trace_dependencies_checked};
+use crate::tracer::{get_language, trace_dependencies_checked_scoped};
 use crate::utils::{probe_file, FileProbe};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -48,6 +48,7 @@ pub struct SelectionPreview {
 
 #[derive(Debug, Clone)]
 pub struct EngineResult {
+    pub tokens_exact: bool,
     pub rendered: String,
     pub packed_files: Vec<PackedFile>,
     pub selected_files: Vec<Candidate>,
@@ -65,12 +66,22 @@ pub struct EngineResult {
 /// transformation; fail-policy previews are sanitized while export is blocked.
 #[derive(Debug, Clone)]
 pub struct FileSnapshot {
+    pub symbols: Vec<crate::symbols::Symbol>,
+    pub map_fallback: Option<PackedFile>,
     pub file: PackedFile,
     pub source_hash: String,
     pub secret_count: usize,
 }
 
 pub struct SnapshotOptions {
+    span_budget: Option<usize>,
+    workspace_root: Option<PathBuf>,
+    scanner: crate::security::SecretScanner,
+    allowlist: Vec<String>,
+    index_store: crate::index::IndexStore,
+    context: crate::symbols::ContextLevel,
+    query: Option<String>,
+    symbol: Option<String>,
     minify: bool,
     policy: SecretPolicy,
     counter: TokenCounter,
@@ -78,8 +89,26 @@ pub struct SnapshotOptions {
 
 impl SnapshotOptions {
     pub fn for_args(args: &Args, cwd: &Path) -> Self {
-        let config = Config::load(cwd);
+        let config = Config::for_args(args, cwd);
         Self {
+            span_budget: args
+                .max_tokens
+                .or(config.max_tokens)
+                .filter(|n| *n > 0)
+                .map(|n| n.saturating_sub(256).max(1)),
+            workspace_root: args.workspace_root.as_ref().map(|p| {
+                if p.is_absolute() {
+                    p.clone()
+                } else {
+                    cwd.join(p)
+                }
+            }),
+            scanner: args.secret_scanner,
+            allowlist: args.secret_allow.clone(),
+            index_store: crate::index::IndexStore::for_args(args, cwd),
+            context: args.context,
+            query: args.query.clone(),
+            symbol: args.symbol.clone(),
             minify: !args.no_minify && (args.minify || config.default_minify.unwrap_or(false)),
             policy: args
                 .secrets
@@ -112,38 +141,89 @@ pub fn snapshot_file_with_options(
     candidate: &Candidate,
     options: &SnapshotOptions,
 ) -> Result<FileSnapshot, EngineError> {
-    let raw =
-        fs::read_to_string(&candidate.path).map_err(|e| EngineError::General(e.to_string()))?;
+    let source_path = crate::scope::check(options.workspace_root.as_deref(), &candidate.path)
+        .map_err(EngineError::General)?;
+    let raw = fs::read_to_string(&source_path).map_err(|e| EngineError::General(e.to_string()))?;
     let source_hash = format!("{:x}", Sha256::digest(raw.as_bytes()));
-    let secret_count = security::find_secrets(&raw).len();
-    let (mut content, redactions) = if options.policy == SecretPolicy::Allow {
-        (raw, 0)
-    } else {
-        security::redact_secrets(&raw)
-    };
+    let original_findings =
+        security::configured_findings(&raw, options.scanner, &options.allowlist)
+            .map_err(EngineError::Secret)?;
+    let secret_count = original_findings.len();
     let language = candidate
         .path
         .extension()
         .and_then(|s| s.to_str())
         .unwrap_or("text")
         .to_string();
+    let indexed = options.index_store.load(&candidate.path, &raw);
+    let index = indexed.index;
+    let (mut content, spans, representation) = crate::symbols::represent_bounded(
+        &index,
+        &raw,
+        options.context,
+        options.query.as_deref(),
+        options.symbol.as_deref(),
+        &options.counter,
+        options.span_budget,
+    )
+    .map_err(EngineError::General)?;
     if options.minify {
         if let Some(lang) = get_language(&language) {
-            content = strip_comments(&content, lang);
+            content = minify_syntax(&content, lang);
         }
-        content = minify_code(&content);
     }
+    let (content, redactions) = if options.policy == SecretPolicy::Allow {
+        (content, 0)
+    } else {
+        let findings = security::configured_findings(&content, options.scanner, &options.allowlist)
+            .map_err(EngineError::Secret)?;
+        security::redact_findings(&content, &findings)
+    };
     let tokens = options.counter.count(&content);
+    let file = PackedFile {
+        path: candidate.path.clone(),
+        content,
+        language,
+        tokens,
+        score: candidate.score,
+        reasons: candidate.reasons.clone(),
+        redactions,
+        spans,
+        representation,
+        source_sha256: source_hash.clone(),
+    };
+    let map_fallback = if options.context == crate::symbols::ContextLevel::Adaptive
+        && options.symbol.is_none()
+        && index.parsed
+        && !index.symbols.is_empty()
+    {
+        let (content, spans, representation) =
+            crate::symbols::represent(&index, &raw, crate::symbols::ContextLevel::Map, None, None)
+                .map_err(EngineError::General)?;
+        let (content, redactions) = if options.policy == SecretPolicy::Allow {
+            (content, 0)
+        } else {
+            let findings =
+                security::configured_findings(&content, options.scanner, &options.allowlist)
+                    .map_err(EngineError::Secret)?;
+            security::redact_findings(&content, &findings)
+        };
+        let mut map = file.clone();
+        map.tokens = options.counter.count(&content);
+        map.content = content;
+        map.spans = spans;
+        map.representation = representation;
+        map.redactions = redactions;
+        map.reasons
+            .push("adaptive-map: implementation omitted by budget".into());
+        Some(map)
+    } else {
+        None
+    };
     Ok(FileSnapshot {
-        file: PackedFile {
-            path: candidate.path.clone(),
-            content,
-            language,
-            tokens,
-            score: candidate.score,
-            reasons: candidate.reasons.clone(),
-            redactions,
-        },
+        symbols: index.symbols,
+        file,
+        map_fallback,
         source_hash,
         secret_count,
     })
@@ -166,7 +246,7 @@ pub fn prepare(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError>
         ));
     }
 
-    let config = Config::load(cwd);
+    let config = Config::for_args(args, cwd);
     let mut selection = selection::gather(args, cwd).map_err(EngineError::General)?;
     let mut skipped_details: Vec<SkippedItem> = selection
         .warnings
@@ -205,6 +285,16 @@ pub fn prepare(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError>
     let mut skipped_files = original_count
         .saturating_sub(selection.candidates.len())
         .saturating_add(skipped_details.len());
+    let scope = args.workspace_root.as_ref().map(|p| {
+        if p.is_absolute() {
+            p.clone()
+        } else {
+            cwd.join(p)
+        }
+    });
+    for candidate in &selection.candidates {
+        crate::scope::check(scope.as_deref(), &candidate.path).map_err(EngineError::General)?;
+    }
     let mut scan_budget =
         crate::scan::ScanBudget::new(crate::scan::ScanLimits::for_args(args, cwd));
     for candidate in &selection.candidates {
@@ -215,33 +305,43 @@ pub fn prepare(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError>
 
     if let Some(q) = &args.query {
         let before_rank = selection.candidates.len();
-        selection.candidates =
-            query::rank_checked(selection.candidates, q, &selection.root, || {
-                scan_budget.check_time()
-            })
-            .map_err(EngineError::General)?;
+        selection.candidates = query::rank_with_store_checked(
+            selection.candidates,
+            q,
+            &selection.root,
+            &crate::index::IndexStore::for_args(args, cwd),
+            args.ranker,
+            !args.no_query_expansion,
+            || scan_budget.check_time(),
+        )
+        .map_err(EngineError::General)?;
         skipped_files += before_rank.saturating_sub(selection.candidates.len());
         selection.mode = "query".to_string();
         if selection.candidates.is_empty() {
-            return Err(EngineError::General(format!(
-                "query matched no files: {}",
-                q
-            )));
+            return Err(EngineError::General(
+                "query matched no files; broaden the terms or remove filters".into(),
+            ));
         }
         scan_budget.check_time().map_err(EngineError::General)?;
-        expand_query_dependencies(
-            &mut selection.candidates,
-            &filter,
-            &selection.root,
-            &mut scan_budget,
-        )
-        .map_err(EngineError::General)?;
+        if !args.no_query_expansion {
+            expand_query_dependencies(
+                &mut selection.candidates,
+                &filter,
+                &selection.root,
+                &mut scan_budget,
+                scope.as_deref(),
+                &crate::dependency_index::DependencyIndex::for_args(args, cwd),
+            )
+            .map_err(EngineError::General)?;
+        }
     } else if args.trace {
         expand_trace(
             &mut selection.candidates,
             &filter,
             &selection.root,
             &mut scan_budget,
+            scope.as_deref(),
+            &crate::dependency_index::DependencyIndex::for_args(args, cwd),
         )
         .map_err(EngineError::General)?;
         selection.mode = format!("{}+trace", selection.mode);
@@ -278,7 +378,26 @@ pub fn prepare(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError>
         selection.mode = format!("{}+impact", selection.mode);
     }
 
+    if let Some(symbol) = &args.symbol {
+        let store = crate::index::IndexStore::for_args(args, cwd);
+        selection.candidates.retain(|c| {
+            fs::read_to_string(&c.path).is_ok_and(|source| {
+                store
+                    .load(&c.path, &source)
+                    .index
+                    .symbols
+                    .iter()
+                    .any(|s| s.name == *symbol || s.qualified_name == *symbol)
+            })
+        });
+        if selection.candidates.is_empty() {
+            return Err(EngineError::General(format!("symbol not found: {symbol}")));
+        }
+        selection.mode.push_str("+symbol");
+    }
+
     for candidate in &selection.candidates {
+        crate::scope::check(scope.as_deref(), &candidate.path).map_err(EngineError::General)?;
         scan_budget
             .read_file(&candidate.path)
             .map_err(EngineError::General)?;
@@ -389,6 +508,7 @@ where
         on_file(index + 1, prepared.candidates.len(), &candidate.path, bytes);
         match snapshot_file_with_options(candidate, &snapshot_options) {
             Ok(snapshot) => snapshots.push(snapshot),
+            Err(error @ EngineError::Secret(_)) => return Err(error),
             Err(error) => {
                 prepared.skipped_files += 1;
                 prepared.skipped_details.push(SkippedItem {
@@ -408,7 +528,7 @@ pub fn run_snapshots(
     args: &Args,
     cwd: &Path,
     prepared: SelectionPreview,
-    snapshots: Vec<FileSnapshot>,
+    mut snapshots: Vec<FileSnapshot>,
 ) -> Result<EngineResult, EngineError> {
     if args.compression != output::Compression::None && args.output.is_none() {
         return Err(EngineError::General(
@@ -416,7 +536,7 @@ pub fn run_snapshots(
         ));
     }
 
-    let config = Config::load(cwd);
+    let config = Config::for_args(args, cwd);
     let format = args
         .format
         .or_else(|| config.format.as_deref().and_then(parse_format))
@@ -468,14 +588,37 @@ pub fn run_snapshots(
     let mut budget_skipped = 0usize;
     let mut skipped_files = prepared_skipped;
 
+    if matches!(
+        args.context,
+        crate::symbols::ContextLevel::Focused | crate::symbols::ContextLevel::Adaptive
+    ) && args.query.is_some()
+        && args.symbol.is_none()
+    {
+        snapshots.sort_by(|a, b| {
+            let av = a.file.score.max(1) as f64 / a.file.tokens.max(1) as f64;
+            let bv = b.file.score.max(1) as f64 / b.file.tokens.max(1) as f64;
+            bv.total_cmp(&av)
+                .then_with(|| a.file.path.cmp(&b.file.path))
+        });
+    }
     for snapshot in snapshots {
-        let file = snapshot.file;
+        let mut file = snapshot.file;
         if secret_policy == SecretPolicy::Fail && snapshot.secret_count > 0 {
             return Err(EngineError::Secret(format!(
                 "secret policy 'fail' blocked {} ({} findings). Use --secrets redact to sanitize.",
                 file.path.display(),
                 snapshot.secret_count
             )));
+        }
+        if max_tokens.is_some_and(|budget| {
+            content_tokens
+                .saturating_add(file.tokens)
+                .saturating_add(180)
+                > budget
+        }) {
+            if let Some(map) = snapshot.map_fallback {
+                file = map;
+            }
         }
         let tokens = file.tokens;
         if let Some(budget) = max_tokens {
@@ -509,7 +652,32 @@ pub fn run_snapshots(
     };
 
     let mut estimate_seed = content_tokens;
+    let render_query = match (&args.query, secret_policy) {
+        (Some(query), policy) if policy != SecretPolicy::Allow => {
+            let findings =
+                security::configured_findings(query, args.secret_scanner, &args.secret_allow)
+                    .map_err(EngineError::Secret)?;
+            if policy == SecretPolicy::Fail && !findings.is_empty() {
+                return Err(EngineError::Secret(
+                    "secret policy 'fail' blocked findings in task metadata".into(),
+                ));
+            }
+            Some(security::redact_findings(query, &findings).0)
+        }
+        _ => args.query.clone(),
+    };
     let (rendered, estimated_tokens) = loop {
+        let included: std::collections::BTreeSet<_> = packed.iter().map(|f| &f.path).collect();
+        let omissions: Vec<_> = selected_files
+            .iter()
+            .filter(|c| !included.contains(&c.path))
+            .map(|c| {
+                (
+                    c.path.clone(),
+                    "not included by final transformation/budget/output plan".into(),
+                )
+            })
+            .collect();
         let redactions: usize = packed.iter().map(|f| f.redactions).sum();
         let mut estimate_hint = estimate_seed;
         let mut iterations = 0usize;
@@ -523,14 +691,20 @@ pub fn run_snapshots(
                 model: counter.model().to_string(),
                 estimated_tokens: estimate_hint,
                 selection_mode: selection_mode.clone(),
-                query: args.query.clone(),
+                query: render_query.clone(),
                 git_commit: git_commit.clone(),
                 redactions,
+                budget_excluded: budget_skipped,
+                skipped: skipped_files,
+                omissions: omissions.clone(),
             };
             let document = output::render(&packed, &options).map_err(EngineError::General)?;
             let actual = counter.count(&document);
             iterations += 1;
-            if actual == estimate_hint || !args.manifest || iterations >= 4 {
+            if actual == estimate_hint
+                || (!args.manifest && format != OutputFormat::Json)
+                || iterations >= 8
+            {
                 break (document, actual);
             }
             estimate_hint = actual;
@@ -567,6 +741,7 @@ pub fn run_snapshots(
     let redactions = packed.iter().map(|f| f.redactions).sum();
 
     Ok(EngineResult {
+        tokens_exact: counter.is_exact(),
         rendered,
         packed_files: packed,
         selected_files,
@@ -586,6 +761,8 @@ fn expand_query_dependencies(
     filter: &FileFilter,
     root: &Path,
     budget: &mut crate::scan::ScanBudget,
+    scope: Option<&Path>,
+    index: &crate::dependency_index::DependencyIndex,
 ) -> Result<(), String> {
     let seeds: Vec<Candidate> = candidates.iter().take(8).cloned().collect();
     let mut additions = Vec::new();
@@ -596,16 +773,19 @@ fn expand_query_dependencies(
             .unwrap_or(&seed.path)
             .display()
             .to_string();
-        for path in trace_dependencies_checked(
+        for path in trace_dependencies_checked_scoped(
             &seed.path,
             |_| {},
             |path| {
+                crate::scope::check(scope, path)?;
                 if filter.should_skip(path) {
                     return Ok(false);
                 }
                 budget.read_file(path)?;
                 Ok(true)
             },
+            scope,
+            Some(index),
         )?
         .into_iter()
         .take(41)
@@ -627,6 +807,8 @@ fn expand_trace(
     filter: &FileFilter,
     root: &Path,
     budget: &mut crate::scan::ScanBudget,
+    scope: Option<&Path>,
+    index: &crate::dependency_index::DependencyIndex,
 ) -> Result<(), String> {
     let seeds: Vec<Candidate> = candidates
         .iter()
@@ -644,16 +826,19 @@ fn expand_trace(
             .unwrap_or(&seed.path)
             .display()
             .to_string();
-        for path in trace_dependencies_checked(
+        for path in trace_dependencies_checked_scoped(
             &seed.path,
             |_| {},
             |path| {
+                crate::scope::check(scope, path)?;
                 if filter.should_skip(path) {
                     return Ok(false);
                 }
                 budget.read_file(path)?;
                 Ok(true)
             },
+            scope,
+            Some(index),
         )? {
             if same_path(&path, &seed.path) || filter.should_skip(&path) {
                 continue;

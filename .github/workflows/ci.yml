@@ -38,8 +38,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --all-targets
-      - run: cargo build --release
+      - run: cargo test --locked --all-targets
+      - run: cargo build --locked --release
+      - name: Exercise synthetic retrieval ablations
+        run: cargo run --locked --release -- --evaluate eval/ablation.json --output target/ablation-report.json
 
   quality:
     name: Tests and Clippy
@@ -49,8 +51,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo test --all-targets
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --all-targets
+      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
 
   smoke:
     name: CLI smoke test
@@ -58,6 +60,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo run -- --help
-      - run: cargo run -- . --dry-run
+      - run: cargo run --locked -- --help
+      - run: cargo run --locked -- . --dry-run
 

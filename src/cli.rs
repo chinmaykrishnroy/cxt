@@ -10,7 +10,7 @@ use std::path::PathBuf;
     author,
     version,
     about = "Fast, code-aware context engine for coding agents and LLMs",
-    long_about = "Fast, code-aware context engine for coding agents and LLMs. Select, trace, rank, secure, budget, and render reviewable code context for an AI task. Selection is local; query ranking and token counts are heuristic, not semantic or billing guarantees.",
+    long_about = "Fast, code-aware context engine for coding agents and LLMs. Select, trace, rank, secure, budget, and render reviewable code context for an AI task. Selection is local; query ranking is lexical and structural, not semantic. Named cl100k/o200k encodings count packet tokens exactly; other profiles are estimates, not billing guarantees.",
     after_help = "Examples:\n  cxt                              Pack current directory to clipboard\n  cxt --tui                        Review interactively (-T; -t is trace)\n  cxt src/main.rs --trace --dry-run  Inspect entry file and resolved imports\n  cxt --git working --impact        Pack changed files, dependents and likely tests\n  cxt --query \"context budget\" --budget 20000 --output context.md\n  cxt --stdout                     Emit context only; status goes to stderr\n  cxt --scan-max-entries 50000 --scan-timeout 60 --dry-run\n\nSafety:\n  Home/ancestor/root scans require --allow-broad-scan. A scan-limit breach blocks export.\n  --no-limit does not disable scan caps; 0 disables an individual numeric cap.\n  Clipboard failure uses a new cxt-output file; existing fallback files are not overwritten.\n  Secret redaction is best-effort. Review before sharing; --secrets fail blocks findings.\n\nConfiguration: global config, then launch-directory .cxt.toml, then CLI scalar overrides.\nGuide and all options: https://github.com/chinmaykrishnroy/cxt/blob/main/docs/CLI_REFERENCE.md\nUse --help for expanded descriptions; --version prints the installed version."
 )]
 pub struct Args {
@@ -51,7 +51,77 @@ pub struct Args {
     #[arg(long, value_name = "TEXT", help_heading = "Input and selection")]
     pub query: Option<String>,
 
-    /// Strip AST-recognized comments and blank lines.
+    /// Explainable query ranker: hybrid, lexical BM25, symbols-only, or legacy substring scores for ablations.
+    #[arg(
+        long,
+        value_enum,
+        default_value = "hybrid",
+        help_heading = "Input and selection"
+    )]
+    #[serde(default)]
+    pub ranker: crate::query::Ranker,
+
+    /// Disable automatic query dependency/reference expansion for controlled retrieval experiments.
+    #[arg(long, help_heading = "Input and selection")]
+    #[serde(default)]
+    pub no_query_expansion: bool,
+
+    /// Context representation: complete files, structural map, focused source spans, or adaptive fallback.
+    #[arg(
+        long = "context",
+        value_enum,
+        default_value = "complete",
+        help_heading = "Transformation and budgets"
+    )]
+    #[serde(default)]
+    pub context: crate::symbols::ContextLevel,
+
+    /// Select a named or qualified AST symbol. Focused output retains original source spans and imports.
+    #[arg(long, help_heading = "Input and selection")]
+    #[serde(default)]
+    pub symbol: Option<String>,
+
+    /// Disable persistent symbol/dependency caching; source and resolver inputs are checked before reuse.
+    #[arg(long, help_heading = "Safety")]
+    #[serde(default)]
+    pub no_cache: bool,
+
+    /// Override the per-user metadata cache directory (symbols and dependency edges). No source bodies are cached.
+    #[arg(long, help_heading = "Safety")]
+    #[serde(default)]
+    pub cache_dir: Option<PathBuf>,
+
+    /// Restrict source reads and dependency expansion to this canonical directory.
+    #[arg(long, help_heading = "Safety")]
+    #[serde(default)]
+    pub workspace_root: Option<PathBuf>,
+
+    /// Serve read-only MCP tools over stdio for one explicit workspace; no HTTP listener.
+    #[arg(long, conflicts_with_all = ["tui", "stdin_paths", "output", "clipboard", "completions"], help_heading = "Review and scripting")]
+    #[serde(default)]
+    pub mcp: bool,
+
+    /// Export the bundled agent SKILL.md without scanning. Optional file path; defaults to cxt-skill/SKILL.md or the selected agent's project location. Never overwrites.
+    #[arg(long, num_args = 0..=1, value_name = "FILE", conflicts_with_all = ["paths", "tui", "mcp", "evaluate", "stdin_paths", "output", "stdout", "clipboard", "completions", "dry_run"], help_heading = "Agent integration")]
+    #[serde(skip)]
+    pub export_skill: Option<Option<PathBuf>>,
+
+    /// Choose the skill export location convention. With --tui, sets the initial agent preference; never edits agent configuration.
+    #[arg(long, value_enum, help_heading = "Agent integration")]
+    #[serde(default)]
+    pub skill_agent: Option<crate::skill::SkillAgent>,
+
+    /// Run a versioned local retrieval corpus and emit a JSON evaluation report; executes this CLI in bounded child processes.
+    #[arg(long, conflicts_with_all = ["mcp", "tui", "stdin_paths", "clipboard", "completions"], help_heading = "Review and scripting")]
+    #[serde(default)]
+    pub evaluate: Option<PathBuf>,
+
+    /// Trusted legacy cxt executable for evaluation comparison; only used with --evaluate.
+    #[arg(long, requires = "evaluate", help_heading = "Review and scripting")]
+    #[serde(default)]
+    pub eval_baseline: Option<PathBuf>,
+
+    /// Compact parsed code conservatively: remove ordinary comments and safe blank lines, preserving literals and recognized directives. Unsupported/invalid syntax stays unchanged.
     #[arg(
         short = 'm',
         long,
@@ -122,7 +192,7 @@ pub struct Args {
     #[arg(long, value_enum, default_value = "none", help_heading = "Output")]
     pub compression: Compression,
 
-    /// Offline estimated-token profile: heuristic, code, gpt-5, o200k, cl100k. Not an exact tokenizer.
+    /// Offline token accounting: cl100k/o200k are exact named encodings; heuristic/code/gpt-5 are estimates. Packet tokens are not chat/billing guarantees.
     #[arg(
         long,
         value_name = "MODEL",
@@ -130,7 +200,7 @@ pub struct Args {
     )]
     pub model: Option<String>,
 
-    /// Estimated token budget including rendered overhead. 0 disables the budget.
+    /// Token budget including rendered overhead, exact for named encodings and estimated otherwise. 0 disables the budget.
     #[arg(
         long,
         visible_alias = "budget",
@@ -146,6 +216,16 @@ pub struct Args {
     /// Best-effort secret policy: redact (default unless configured), fail, or allow. Review before sharing.
     #[arg(long, value_enum, help_heading = "Safety")]
     pub secrets: Option<SecretPolicy>,
+
+    /// Secret scanning backend: builtin patterns, or builtin plus installed Gitleaks. Scanner failures block export.
+    #[arg(long, value_enum, default_value = "builtin", help_heading = "Safety")]
+    #[serde(default)]
+    pub secret_scanner: crate::security::SecretScanner,
+
+    /// Explicit regex allowlist for known example findings. Repeatable; broad rules can bypass protection.
+    #[arg(long, help_heading = "Safety")]
+    #[serde(default)]
+    pub secret_allow: Vec<String>,
 
     /// Add provenance metadata, selection reasons, hashes, and Git commit information.
     #[arg(long, help_heading = "Output")]
@@ -232,6 +312,11 @@ mod tests {
         let short = command.render_help().to_string();
         let long = command.render_long_help().to_string();
         let reference = include_str!("../docs/CLI_REFERENCE.md");
+        assert_eq!(
+            reference.lines().next(),
+            Some("# cxt user guide and CLI reference"),
+            "the rolling reference must not pin a stale release version"
+        );
         for argument in command.get_arguments() {
             if let Some(name) = argument.get_long() {
                 let flag = format!("--{name}");

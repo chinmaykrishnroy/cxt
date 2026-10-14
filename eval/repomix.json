@@ -1,0 +1,11 @@
+{
+  "input": { "processors": [] },
+  "output": {
+    "git": { "sortByChanges": false, "includeDiffs": false, "includeLogs": false },
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "compress": false,
+    "showLineNumbers": false
+  },
+  "security": { "enableSecurityCheck": true }
+}

@@ -1,6 +1,6 @@
+use crate::dependency_index::ObservedPath;
 use crate::resolver::find_project_root;
-use std::collections::BTreeSet;
-use std::fs;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use tree_sitter::Node;
 
@@ -8,13 +8,101 @@ struct CrateContext<'a> {
     dir: &'a Path,
     name: &'a str,
     lib: &'a Path,
+    local_crates: &'a BTreeMap<String, Vec<PathBuf>>,
 }
 
-pub(crate) fn dependencies(file: &Path, node: Node, source: &[u8]) -> Vec<PathBuf> {
-    let root = find_project_root(file.parent().unwrap_or(Path::new(".")));
-    let manifest = fs::read_to_string(root.join("Cargo.toml"))
+fn manifest(path: &Path, scope: Option<&Path>) -> Option<toml::Value> {
+    crate::resolver::scoped_text(scope, &path.join("Cargo.toml"))?
+        .parse()
         .ok()
-        .and_then(|text| text.parse::<toml::Value>().ok());
+}
+
+fn local_crates(
+    root: &Path,
+    value: Option<&toml::Value>,
+    scope: Option<&Path>,
+) -> Result<BTreeMap<String, Vec<PathBuf>>, String> {
+    let mut crates: BTreeMap<String, Vec<PathBuf>> = BTreeMap::new();
+    let mut inherited = None;
+    for ancestor in root.ancestors().take(16) {
+        if crate::scope::check(scope, ancestor).is_err() {
+            break;
+        }
+        if crate::scan::ScanLimits::default().guard(ancestor).is_err() {
+            break;
+        }
+        if let Some(workspace) = manifest(ancestor, scope).and_then(|m| m.get("workspace").cloned())
+        {
+            inherited = workspace
+                .get("dependencies")
+                .cloned()
+                .map(|deps| (ancestor.to_path_buf(), deps));
+            break;
+        }
+    }
+    let Some(value) = value else {
+        return Ok(crates);
+    };
+    let targets = value.get("target").and_then(toml::Value::as_table);
+    if targets.is_some_and(|t| t.len() > 128) {
+        return Err("Cargo resolver exceeded 128 target tables".into());
+    }
+    let sections = std::iter::once(value).chain(targets.into_iter().flat_map(|t| t.values()));
+    for section in sections {
+        for key in ["dependencies", "dev-dependencies", "build-dependencies"] {
+            let Some(deps) = section.get(key).and_then(toml::Value::as_table) else {
+                continue;
+            };
+            if deps.len() > 128 {
+                return Err("Cargo resolver exceeded 128 dependencies in one table".into());
+            }
+            for (name, settings) in deps {
+                let (origin, settings) =
+                    if settings.get("workspace").and_then(toml::Value::as_bool) == Some(true) {
+                        let Some((origin, deps)) = &inherited else {
+                            continue;
+                        };
+                        let Some(settings) = deps.get(name) else {
+                            continue;
+                        };
+                        (origin.as_path(), settings)
+                    } else {
+                        (root, settings)
+                    };
+                let Some(path) = settings.get("path").and_then(toml::Value::as_str) else {
+                    continue;
+                };
+                let directory = origin.join(path);
+                let Some(dependency) = manifest(&directory, scope) else {
+                    continue;
+                };
+                let lib = dependency
+                    .get("lib")
+                    .and_then(|l| l.get("path"))
+                    .and_then(toml::Value::as_str)
+                    .unwrap_or("src/lib.rs");
+                let entry = directory.join(lib);
+                if entry.observed_is_file() && crate::scope::check(scope, &entry).is_ok() {
+                    let entries = crates.entry(name.replace('-', "_")).or_default();
+                    if !entries.contains(&entry) {
+                        entries.push(entry);
+                    }
+                }
+            }
+        }
+    }
+    Ok(crates)
+}
+
+pub(crate) fn dependencies(
+    file: &Path,
+    node: Node,
+    source: &[u8],
+    scope: Option<&Path>,
+) -> Result<Vec<PathBuf>, String> {
+    let root = find_project_root(file.parent().unwrap_or(Path::new(".")));
+    let manifest = manifest(&root, scope);
+    let local_crates = local_crates(&root, manifest.as_ref(), scope)?;
     let lib = manifest.as_ref().and_then(|m| m.get("lib"));
     let lib_path = root.join(
         lib.and_then(|l| l.get("path"))
@@ -27,7 +115,7 @@ pub(crate) fn dependencies(file: &Path, node: Node, source: &[u8]) -> Vec<PathBu
         .or_else(|| manifest.as_ref()?.get("package")?.get("name")?.as_str())
         .unwrap_or("")
         .replace('-', "_");
-    let crate_dir = if lib_path.is_file() {
+    let crate_dir = if lib_path.observed_is_file() {
         lib_path.parent().unwrap_or(&root)
     } else {
         file.parent().unwrap_or(&root)
@@ -35,7 +123,8 @@ pub(crate) fn dependencies(file: &Path, node: Node, source: &[u8]) -> Vec<PathBu
     let parent = file.parent().unwrap_or(&root);
     let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("");
     let module_dir = if matches!(stem, "lib" | "main" | "mod")
-        || file.canonicalize().ok() == lib_path.canonicalize().ok() && lib_path.is_file()
+        || file.observed_canonicalize().ok() == lib_path.observed_canonicalize().ok()
+            && lib_path.observed_is_file()
     {
         parent.to_path_buf()
     } else {
@@ -51,11 +140,12 @@ pub(crate) fn dependencies(file: &Path, node: Node, source: &[u8]) -> Vec<PathBu
             dir: crate_dir,
             name: &crate_name,
             lib: &lib_path,
+            local_crates: &local_crates,
         },
         &mut output,
     );
     output.remove(file);
-    output.into_iter().collect()
+    Ok(output.into_iter().collect())
 }
 
 fn walk(
@@ -91,7 +181,7 @@ fn walk(
                 .and_then(|text| text.split('"').nth(1));
             let path = override_path
                 .map(|p| attribute_dir.join(p))
-                .filter(|p| p.is_file())
+                .filter(|p| p.observed_is_file())
                 .or_else(|| module_file(&module_dir.join(name)));
             if let Some(path) = path {
                 out.insert(path);
@@ -113,12 +203,21 @@ fn walk(
                     "crate" => krate.dir.to_path_buf(),
                     "self" | "super" => module_dir.to_path_buf(),
                     name if !krate.name.is_empty() && name == krate.name => {
-                        if krate.lib.is_file() {
+                        if krate.lib.observed_is_file() {
                             out.insert(krate.lib.to_path_buf());
                         }
                         krate.dir.to_path_buf()
                     }
-                    _ => continue, // External crates must never resolve to similarly named local files.
+                    name if krate.local_crates.contains_key(name) => {
+                        let entries = &krate.local_crates[name];
+                        out.extend(entries.iter().cloned());
+                        entries
+                            .first()
+                            .and_then(|p| p.parent())
+                            .unwrap_or(module_dir)
+                            .to_path_buf()
+                    }
+                    _ => continue, // Registry crates are not similarly named local files.
                 };
                 if first == "super" {
                     while parts.first() == Some(&"super") {
@@ -145,7 +244,7 @@ fn walk(
                     parts.pop();
                 }
                 if !resolved {
-                    if base == krate.dir && krate.lib.is_file() {
+                    if base == krate.dir && krate.lib.observed_is_file() {
                         out.insert(krate.lib.to_path_buf());
                     } else if let Some(path) = module_file(&base) {
                         out.insert(path);
@@ -164,11 +263,11 @@ fn walk(
 
 fn module_file(path: &Path) -> Option<PathBuf> {
     let flat = path.with_extension("rs");
-    if flat.is_file() {
+    if flat.observed_is_file() {
         Some(flat)
     } else {
         let nested = path.join("mod.rs");
-        nested.is_file().then_some(nested)
+        nested.observed_is_file().then_some(nested)
     }
 }
 

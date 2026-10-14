@@ -1,0 +1,3141 @@
+{
+  "schema": "cxt.public-task-research.v1",
+  "research_date": "2026-10-14",
+  "dataset_kind": "public_real_bugfix_research_candidates",
+  "executable_by_cxt_evaluate": false,
+  "warning": "Evaluator-only research metadata includes fix identities and causal labels. Do not give this manifest, fix history, post-fix tests or research notes to retrieval tools. Input roots and materialization ledgers are generated separately; no task is admitted here as reviewed gold.",
+  "target_tasks": 30,
+  "candidate_tasks": 30,
+  "admitted_tasks": 0,
+  "integration_handoff": {
+    "schema": "cxt.public-task-integration.v1",
+    "batch_id": "public-bootstrap-6-v1",
+    "task_ids": [
+      "fd-format-hyphen",
+      "click-black-color-zero",
+      "ky-json-error-utf8",
+      "afero-tar-independent-handles",
+      "jsoup-malformed-end-tag",
+      "arduinojson-long-numeric-string"
+    ],
+    "validation_level": "all six: static parent/source/span/license checks; Click only: isolated behavioral reproduction",
+    "admitted_for_confirmatory_scoring": false,
+    "materialized_locally": false,
+    "isolated_behavior_checks_passed": 1,
+    "projection": {
+      "schema": "cxt.eval.v1",
+      "dataset_kind": "public_real_partial_source_checked_exploratory",
+      "budgets": [
+        8000,
+        16000,
+        32000
+      ],
+      "contexts": [
+        "complete",
+        "focused",
+        "adaptive"
+      ],
+      "rankers": [
+        "hybrid"
+      ],
+      "query_expansion": [
+        true
+      ],
+      "root_template": "inputs/{id}",
+      "source_fields": [
+        "id",
+        "query",
+        "required_files"
+      ],
+      "label_name_policy": "Use explicit source-literal runner names below, not qualified display names; preserve original bounds. Non-callable enum block is span recall; fd field-attribute task is file-recall-only.",
+      "required_symbols_by_task": {
+        "fd-format-hyphen": [],
+        "click-black-color-zero": [
+          {
+            "path": "src/click/termui.py",
+            "name": "_interpret_color",
+            "start_line": 572,
+            "end_line": 580
+          },
+          {
+            "path": "src/click/termui.py",
+            "name": "style",
+            "start_line": 583,
+            "end_line": 709
+          }
+        ],
+        "ky-json-error-utf8": [
+          {
+            "path": "source/core/Ky.ts",
+            "name": "#readResponseText",
+            "start_line": 860,
+            "end_line": 922
+          }
+        ],
+        "afero-tar-independent-handles": [
+          {
+            "path": "tarfs/fs.go",
+            "name": "New",
+            "start_line": 31,
+            "end_line": 81
+          },
+          {
+            "path": "tarfs/fs.go",
+            "name": "Open",
+            "start_line": 83,
+            "end_line": 97
+          }
+        ],
+        "jsoup-malformed-end-tag": [
+          {
+            "path": "src/main/java/org/jsoup/parser/TokeniserState.java",
+            "name": "EndTagOpen",
+            "start_line": 128,
+            "end_line": 147
+          }
+        ],
+        "arduinojson-long-numeric-string": [
+          {
+            "path": "src/ArduinoJson/Numbers/FloatTraits.hpp",
+            "name": "make_float",
+            "start_line": 195,
+            "end_line": 210
+          }
+        ]
+      }
+    },
+    "fetch_contract": {
+      "transport": "git",
+      "origin_field": "repository",
+      "origin_suffix": ".git",
+      "revision_field": "base_commit",
+      "depth": 1,
+      "no_tags": true,
+      "checkout": "detached; core.autocrlf=false; no future fix objects in task repository",
+      "object_validation": "HEAD == base_commit; verify parent separately in evaluator-only evidence, not task input",
+      "destinations": {
+        "corpus": "corpus.json",
+        "inputs": "inputs/{id}",
+        "ledger": "materialization-ledger.json"
+      },
+      "overwrite_existing": false,
+      "partial_failure_policy": "retain per-task errors, include only successful materializations in exploratory corpus; exit nonzero if any task failed",
+      "source_validation": "Reject symlinks/submodules; compare required/support/license checkout bytes with git show BASE:path; verify original line/byte bounds; hash with SHA-256",
+      "no_upstream_execution": true
+    },
+    "remaining_gates": [
+      "independent causal-label review",
+      "full-checkout base failure/fix regression verification",
+      "local materialization",
+      "retrieval execution and independent exact token counting",
+      "repository-family split; retrospective-query stratum",
+      "actual core/toolchain/device environment for embedded tasks"
+    ]
+  },
+  "quarantined_tasks": 2,
+  "budgets": [
+    8000,
+    16000,
+    32000
+  ],
+  "tokenizer": "cl100k_base; independently tokenize complete final packet after rendering",
+  "line_coordinates": "one-based inclusive at base_commit",
+  "byte_coordinates": "original UTF-8 half-open byte offsets, including the last labeled line terminator if present; no source normalization",
+  "repositories": [
+    {
+      "repository": "https://github.com/sharkdp/fd",
+      "language": "Rust",
+      "task_count": 5,
+      "license": "MIT",
+      "size_snapshot_base": "bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c",
+      "tree_url": "https://api.github.com/repos/sharkdp/fd/git/trees/bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c?recursive=1",
+      "tree_truncated": false,
+      "tracked_blob_count": 60,
+      "tracked_blob_bytes": 576464
+    },
+    {
+      "repository": "https://github.com/pallets/click",
+      "language": "Python",
+      "task_count": 5,
+      "license": "BSD-3-Clause",
+      "size_snapshot_base": "6d5bac5c712195cbfa9666ba0ecbf0573cdea356",
+      "tree_url": "https://api.github.com/repos/pallets/click/git/trees/6d5bac5c712195cbfa9666ba0ecbf0573cdea356?recursive=1",
+      "tree_truncated": false,
+      "tracked_blob_count": 178,
+      "tracked_blob_bytes": 1639013
+    },
+    {
+      "repository": "https://github.com/sindresorhus/ky",
+      "language": "TypeScript",
+      "task_count": 5,
+      "license": "MIT",
+      "size_snapshot_base": "830ab472fa18e1ba48861b2f36214d4c20a10f5d",
+      "tree_url": "https://api.github.com/repos/sindresorhus/ky/git/trees/830ab472fa18e1ba48861b2f36214d4c20a10f5d?recursive=1",
+      "tree_truncated": false,
+      "tracked_blob_count": 70,
+      "tracked_blob_bytes": 914927
+    },
+    {
+      "repository": "https://github.com/spf13/afero",
+      "language": "Go",
+      "task_count": 5,
+      "license": "Apache-2.0",
+      "size_snapshot_base": "768f1fb0e5535b77d90e44c531aacd652aabd96a",
+      "tree_url": "https://api.github.com/repos/spf13/afero/git/trees/768f1fb0e5535b77d90e44c531aacd652aabd96a?recursive=1",
+      "tree_truncated": false,
+      "tracked_blob_count": 87,
+      "tracked_blob_bytes": 437646
+    },
+    {
+      "repository": "https://github.com/jhy/jsoup",
+      "language": "Java",
+      "task_count": 5,
+      "license": "MIT",
+      "size_snapshot_base": "ea6d5bae43ada574e650814690ffa3622416daa6",
+      "tree_url": "https://api.github.com/repos/jhy/jsoup/git/trees/ea6d5bae43ada574e650814690ffa3622416daa6?recursive=1",
+      "tree_truncated": false,
+      "tracked_blob_count": 319,
+      "tracked_blob_bytes": 3219653
+    },
+    {
+      "repository": "https://github.com/bblanchon/ArduinoJson",
+      "language": "C++ (Arduino-compatible)",
+      "task_count": 5,
+      "license": "MIT",
+      "size_snapshot_base": "ab8c9be6099af1915bdfec0ea482002bdc0e90de",
+      "tree_url": "https://api.github.com/repos/bblanchon/ArduinoJson/git/trees/ab8c9be6099af1915bdfec0ea482002bdc0e90de?recursive=1",
+      "tree_truncated": false,
+      "tracked_blob_count": 517,
+      "tracked_blob_bytes": 1725157
+    }
+  ],
+  "competitors": [
+    {
+      "repository": "https://github.com/yamadashy/repomix",
+      "commit": "55c6de6aebde4c38877fbcaf005c4cc396bf6e2d",
+      "commit_url": "https://github.com/yamadashy/repomix/commit/55c6de6aebde4c38877fbcaf005c4cc396bf6e2d",
+      "committed_at": "2026-10-11T15:58:43Z",
+      "recipe_status": "source_checked_not_installed_or_executed"
+    },
+    {
+      "repository": "https://github.com/mufeedvh/code2prompt",
+      "commit": "66585136062c04275ddd5a01c5518a4d78c4aa76",
+      "commit_url": "https://github.com/mufeedvh/code2prompt/commit/66585136062c04275ddd5a01c5518a4d78c4aa76",
+      "committed_at": "2026-09-07T07:26:18Z",
+      "recipe_status": "source_checked_not_installed_or_executed"
+    },
+    {
+      "repository": "https://github.com/dotcommander/repomap",
+      "commit": "a61d6afce25a7623e221166555680bc7b7b2895d",
+      "commit_url": "https://github.com/dotcommander/repomap/commit/a61d6afce25a7623e221166555680bc7b7b2895d",
+      "committed_at": "2026-08-30T17:42:19Z",
+      "recipe_status": "source_checked_not_installed_or_executed"
+    },
+    {
+      "repository": "https://github.com/coderamp-labs/gitingest",
+      "commit": "4e259a02fe72115bee538271622f1234a81c8e1a",
+      "commit_url": "https://github.com/coderamp-labs/gitingest/commit/4e259a02fe72115bee538271622f1234a81c8e1a",
+      "committed_at": "2025-08-16T01:30:46Z",
+      "recipe_status": "source_checked_not_installed_or_executed"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "fd-format-hyphen",
+      "repository": "https://github.com/sharkdp/fd",
+      "repository_full_name": "sharkdp/fd",
+      "language": "Rust",
+      "title": "Hyphen-leading format templates",
+      "query": "Passing a Markdown-list format as the separate argument --format \"- {/.}\" is rejected as an option, although the equals form works. Accept the documented separate-value invocation.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/sharkdp/fd/issues/2126",
+        "kind": "issue",
+        "created_at": "2026-09-07T22:22:49Z",
+        "updated_at": "2026-09-09T01:47:39Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c",
+      "base_url": "https://github.com/sharkdp/fd/commit/bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c",
+      "fix_commit": "b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+      "fix_url": "https://github.com/sharkdp/fd/commit/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+      "fix_committed_at": "2026-09-09T01:47:37Z",
+      "comparison_url": "https://github.com/sharkdp/fd/compare/bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c...b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE-MIT",
+        "declared_spdx": "MIT OR Apache-2.0",
+        "selected_redistribution_license": "MIT",
+        "source_url": "https://github.com/sharkdp/fd/blob/bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c/LICENSE-MIT",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/cli.rs"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/cli.rs",
+          "name": "Opts.format",
+          "start_line": 481,
+          "end_line": 487,
+          "start_byte": 17626,
+          "end_byte": 17812,
+          "label_kind": "field_attributes",
+          "source_url": "https://github.com/sharkdp/fd/blob/bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c/src/cli.rs#L481-L487",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "tests/tests.rs",
+          "revision": "bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c/tests/tests.rs",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "Cargo.toml",
+          "revision": "bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/bb80489efb9fe2bdeabe1844feb5ee0af6fc9b1c/Cargo.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "tests/tests.rs",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/tests/tests.rs",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Opts.format is a field with parser attributes, not a function; score source-span recall separately from full-symbol recall.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/fd-format-hyphen"
+    },
+    {
+      "id": "fd-error-newlines",
+      "repository": "https://github.com/sharkdp/fd",
+      "repository_full_name": "sharkdp/fd",
+      "language": "Rust",
+      "title": "Multiline diagnostic rendering",
+      "query": "Running fd with a slash-containing search pattern displays literal escape text instead of line breaks in its multiline error. Preserve readable multiline diagnostics.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/sharkdp/fd/issues/2104",
+        "kind": "issue",
+        "created_at": "2026-08-27T15:05:23Z",
+        "updated_at": "2026-09-02T15:57:44Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "fe0e455feea831a055599accb5ac4eea2e3d6ba1",
+      "base_url": "https://github.com/sharkdp/fd/commit/fe0e455feea831a055599accb5ac4eea2e3d6ba1",
+      "fix_commit": "a3942dbb2507505d9fd6f899d5506c0682222acf",
+      "fix_url": "https://github.com/sharkdp/fd/commit/a3942dbb2507505d9fd6f899d5506c0682222acf",
+      "fix_committed_at": "2026-08-28T04:37:42Z",
+      "comparison_url": "https://github.com/sharkdp/fd/compare/fe0e455feea831a055599accb5ac4eea2e3d6ba1...a3942dbb2507505d9fd6f899d5506c0682222acf",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE-MIT",
+        "declared_spdx": "MIT OR Apache-2.0",
+        "selected_redistribution_license": "MIT",
+        "source_url": "https://github.com/sharkdp/fd/blob/fe0e455feea831a055599accb5ac4eea2e3d6ba1/LICENSE-MIT",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/error.rs"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/error.rs",
+          "name": "print_error",
+          "start_line": 5,
+          "end_line": 9,
+          "start_byte": 64,
+          "end_byte": 244,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/fe0e455feea831a055599accb5ac4eea2e3d6ba1/src/error.rs#L5-L9",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "Cargo.toml",
+          "revision": "fe0e455feea831a055599accb5ac4eea2e3d6ba1",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/fe0e455feea831a055599accb5ac4eea2e3d6ba1/Cargo.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [],
+      "label_status": "quarantined_fix_regression_risk",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Quarantine for repair-success experiments: this historical fix is subsequently identified by issue #2119 as reintroducing unsanitized error-path output. It remains a genuine retrieval problem, not an acceptable standalone safety fix.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/fd-error-newlines"
+    },
+    {
+      "id": "fd-broken-symlink-depth",
+      "repository": "https://github.com/sharkdp/fd",
+      "repository_full_name": "sharkdp/fd",
+      "language": "Rust",
+      "title": "Broken symlinks and minimum depth",
+      "query": "A broken symlink is listed while following links, but disappears when --min-depth=0 or --min-depth=1 is added even though its depth should qualify.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/sharkdp/fd/issues/1017",
+        "kind": "issue",
+        "created_at": "2022-05-12T14:54:07Z",
+        "updated_at": "2026-09-24T07:34:14Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "ee20f426ddf338ac7ead5c5f00ea49258005caaf",
+      "base_url": "https://github.com/sharkdp/fd/commit/ee20f426ddf338ac7ead5c5f00ea49258005caaf",
+      "fix_commit": "350b33acda4cbcdec7245d3c4794bc7ba6ad55db",
+      "fix_url": "https://github.com/sharkdp/fd/commit/350b33acda4cbcdec7245d3c4794bc7ba6ad55db",
+      "fix_committed_at": "2026-08-10T09:30:46Z",
+      "comparison_url": "https://github.com/sharkdp/fd/compare/ee20f426ddf338ac7ead5c5f00ea49258005caaf...350b33acda4cbcdec7245d3c4794bc7ba6ad55db",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE-MIT",
+        "declared_spdx": "MIT OR Apache-2.0",
+        "selected_redistribution_license": "MIT",
+        "source_url": "https://github.com/sharkdp/fd/blob/ee20f426ddf338ac7ead5c5f00ea49258005caaf/LICENSE-MIT",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/dir_entry.rs",
+        "src/walk.rs"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/dir_entry.rs",
+          "name": "DirEntry::broken_symlink",
+          "start_line": 34,
+          "end_line": 40,
+          "start_byte": 708,
+          "end_byte": 920,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/ee20f426ddf338ac7ead5c5f00ea49258005caaf/src/dir_entry.rs#L34-L40",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/dir_entry.rs",
+          "name": "DirEntry::depth",
+          "start_line": 98,
+          "end_line": 103,
+          "start_byte": 2722,
+          "end_byte": 2919,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/ee20f426ddf338ac7ead5c5f00ea49258005caaf/src/dir_entry.rs#L98-L103",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/walk.rs",
+          "name": "WorkerState::spawn_senders",
+          "start_line": 443,
+          "end_line": 614,
+          "start_byte": 14206,
+          "end_byte": 20879,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/ee20f426ddf338ac7ead5c5f00ea49258005caaf/src/walk.rs#L443-L614",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "tests/tests.rs",
+          "revision": "ee20f426ddf338ac7ead5c5f00ea49258005caaf",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/ee20f426ddf338ac7ead5c5f00ea49258005caaf/tests/tests.rs",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "Cargo.toml",
+          "revision": "ee20f426ddf338ac7ead5c5f00ea49258005caaf",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/ee20f426ddf338ac7ead5c5f00ea49258005caaf/Cargo.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "tests/tests.rs",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sharkdp/fd/blob/350b33acda4cbcdec7245d3c4794bc7ba6ad55db/tests/tests.rs",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Symlink setup and behavior are platform dependent; no Windows/Unix reproduction performed. The large spawn_senders span contains unrelated routing; minimal causal labeling needs review.",
+      "source_evidence": {
+        "changed_source_files_read": 2,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/fd-broken-symlink-depth"
+    },
+    {
+      "id": "fd-and-path-diagnostic",
+      "repository": "https://github.com/sharkdp/fd",
+      "repository_full_name": "sharkdp/fd",
+      "language": "Rust",
+      "title": "Path-like additional search patterns",
+      "query": "An additional --and pattern containing a path separator silently yields no results when matching file names. The same invalid primary pattern gets an explanatory diagnostic.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/sharkdp/fd/issues/1873",
+        "kind": "issue",
+        "created_at": "2026-01-15T00:32:10Z",
+        "updated_at": "2026-04-23T06:36:24Z",
+        "relation": "related_context_not_direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "a8a77d21621a11dbe499f1732331448c48ce9b76",
+      "base_url": "https://github.com/sharkdp/fd/commit/a8a77d21621a11dbe499f1732331448c48ce9b76",
+      "fix_commit": "6aac84e4ae30c502d22a76c2e80183ac7306d544",
+      "fix_url": "https://github.com/sharkdp/fd/commit/6aac84e4ae30c502d22a76c2e80183ac7306d544",
+      "fix_committed_at": "2026-06-26T08:02:47Z",
+      "comparison_url": "https://github.com/sharkdp/fd/compare/a8a77d21621a11dbe499f1732331448c48ce9b76...6aac84e4ae30c502d22a76c2e80183ac7306d544",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE-MIT",
+        "declared_spdx": "MIT OR Apache-2.0",
+        "selected_redistribution_license": "MIT",
+        "source_url": "https://github.com/sharkdp/fd/blob/a8a77d21621a11dbe499f1732331448c48ce9b76/LICENSE-MIT",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/main.rs"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/main.rs",
+          "name": "ensure_search_pattern_is_not_a_path",
+          "start_line": 166,
+          "end_line": 202,
+          "start_byte": 10881,
+          "end_byte": 12467,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/a8a77d21621a11dbe499f1732331448c48ce9b76/src/main.rs#L166-L202",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "tests/tests.rs",
+          "revision": "a8a77d21621a11dbe499f1732331448c48ce9b76",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/a8a77d21621a11dbe499f1732331448c48ce9b76/tests/tests.rs",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "Cargo.toml",
+          "revision": "a8a77d21621a11dbe499f1732331448c48ce9b76",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/a8a77d21621a11dbe499f1732331448c48ce9b76/Cargo.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "tests/tests.rs",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sharkdp/fd/blob/6aac84e4ae30c502d22a76c2e80183ac7306d544/tests/tests.rs",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Issue #1873 is related context about the primary-pattern diagnostic, not a direct report of the --and extension. Query is retrospectively reconstructed from the fix commit; do not count it as a verified historical issue query.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/fd-and-path-diagnostic"
+    },
+    {
+      "id": "fd-error-path-controls",
+      "repository": "https://github.com/sharkdp/fd",
+      "repository_full_name": "sharkdp/fd",
+      "language": "Rust",
+      "title": "Control characters in diagnostics",
+      "query": "File-system errors and command-not-found diagnostics containing unusual file names can send control sequences directly to the terminal. Keep diagnostics safe without destroying their intended multiline layout.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/sharkdp/fd/issues/2119",
+        "kind": "issue",
+        "created_at": "2026-09-04T14:06:04Z",
+        "updated_at": "2026-09-15T08:01:00Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+      "base_url": "https://github.com/sharkdp/fd/commit/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+      "fix_commit": "24198d904a074f2943b2a3be925e53134c994734",
+      "fix_url": "https://github.com/sharkdp/fd/commit/24198d904a074f2943b2a3be925e53134c994734",
+      "fix_committed_at": "2026-09-15T08:00:58Z",
+      "comparison_url": "https://github.com/sharkdp/fd/compare/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5...24198d904a074f2943b2a3be925e53134c994734",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE-MIT",
+        "declared_spdx": "MIT OR Apache-2.0",
+        "selected_redistribution_license": "MIT",
+        "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/LICENSE-MIT",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/error.rs",
+        "src/sanitize.rs",
+        "src/exec/command.rs",
+        "src/exec/job.rs"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/error.rs",
+          "name": "print_error",
+          "start_line": 1,
+          "end_line": 3,
+          "start_byte": 0,
+          "end_byte": 88,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/error.rs#L1-L3",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/sanitize.rs",
+          "name": "sanitize_for_terminal",
+          "start_line": 28,
+          "end_line": 46,
+          "start_byte": 1164,
+          "end_byte": 1679,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/sanitize.rs#L28-L46",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/sanitize.rs",
+          "name": "maybe_sanitize",
+          "start_line": 49,
+          "end_line": 55,
+          "start_byte": 1758,
+          "end_byte": 1933,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/sanitize.rs#L49-L55",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/exec/command.rs",
+          "name": "handle_cmd_error",
+          "start_line": 101,
+          "end_line": 115,
+          "start_byte": 2857,
+          "end_byte": 3366,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/exec/command.rs#L101-L115",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/exec/job.rs",
+          "name": "job",
+          "start_line": 11,
+          "end_line": 44,
+          "start_byte": 436,
+          "end_byte": 1533,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/exec/job.rs#L11-L44",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/exec/job.rs",
+          "name": "batch",
+          "start_line": 46,
+          "end_line": 64,
+          "start_byte": 1534,
+          "end_byte": 2146,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/exec/job.rs#L46-L64",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "src/cli.rs",
+          "revision": "b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+          "role": "changed_runtime_or_contract_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/cli.rs",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "src/main.rs",
+          "revision": "b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+          "role": "changed_runtime_or_contract_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/main.rs",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "src/output.rs",
+          "revision": "b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+          "role": "changed_runtime_or_contract_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/output.rs",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "src/walk.rs",
+          "revision": "b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+          "role": "changed_runtime_or_contract_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/src/walk.rs",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "tests/testenv/mod.rs",
+          "revision": "b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/tests/testenv/mod.rs",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "tests/tests.rs",
+          "revision": "b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/tests/tests.rs",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "Cargo.toml",
+          "revision": "b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sharkdp/fd/blob/b422e5d8c9cffaa1ae43ba68e7b97a60fb3e8ae5/Cargo.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "tests/testenv/mod.rs",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sharkdp/fd/blob/24198d904a074f2943b2a3be925e53134c994734/tests/testenv/mod.rs",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "tests/tests.rs",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sharkdp/fd/blob/24198d904a074f2943b2a3be925e53134c994734/tests/tests.rs",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Broad refactor: proposed required labels cover error output, escaping and two execution paths, but cli.rs/main.rs/walk.rs/output.rs changed too. Their necessity is unresolved; no terminal escape payload was executed.",
+      "source_evidence": {
+        "changed_source_files_read": 8,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/fd-error-path-controls"
+    },
+    {
+      "id": "click-short-help-abbreviation",
+      "repository": "https://github.com/pallets/click",
+      "repository_full_name": "pallets/click",
+      "language": "Python",
+      "title": "Short help with abbreviations",
+      "query": "Command short help stops prematurely at abbreviations such as vs. or e.g. within the first sentence. Keep a useful first-sentence summary while respecting the short-help length limit.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/pallets/click/pull/3865",
+        "kind": "pull_request",
+        "created_at": "2026-09-11T06:25:50Z",
+        "updated_at": "2026-09-27T00:36:31Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "6d5bac5c712195cbfa9666ba0ecbf0573cdea356",
+      "base_url": "https://github.com/pallets/click/commit/6d5bac5c712195cbfa9666ba0ecbf0573cdea356",
+      "fix_commit": "f67c2bb6c2f055c1c7a57cd46c3697fc26a7742e",
+      "fix_url": "https://github.com/pallets/click/commit/f67c2bb6c2f055c1c7a57cd46c3697fc26a7742e",
+      "fix_committed_at": "2026-09-11T07:01:09Z",
+      "comparison_url": "https://github.com/pallets/click/compare/6d5bac5c712195cbfa9666ba0ecbf0573cdea356...f67c2bb6c2f055c1c7a57cd46c3697fc26a7742e",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "BSD-3-Clause",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/pallets/click/blob/6d5bac5c712195cbfa9666ba0ecbf0573cdea356/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/click/utils.py"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/click/utils.py",
+          "name": "_make_default_short_help",
+          "start_line": 62,
+          "end_line": 112,
+          "start_byte": 1469,
+          "end_byte": 2815,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/pallets/click/blob/6d5bac5c712195cbfa9666ba0ecbf0573cdea356/src/click/utils.py#L62-L112",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "tests/test_utils/test_make_default_short_help.py",
+          "revision": "6d5bac5c712195cbfa9666ba0ecbf0573cdea356",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/pallets/click/blob/6d5bac5c712195cbfa9666ba0ecbf0573cdea356/tests/test_utils/test_make_default_short_help.py",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "pyproject.toml",
+          "revision": "6d5bac5c712195cbfa9666ba0ecbf0573cdea356",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/pallets/click/blob/6d5bac5c712195cbfa9666ba0ecbf0573cdea356/pyproject.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "tests/test_utils/test_make_default_short_help.py",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/pallets/click/blob/f67c2bb6c2f055c1c7a57cd46c3697fc26a7742e/tests/test_utils/test_make_default_short_help.py",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Earlier PR contains both symptom and solution discussion. Query uses only the symptom; exact historical issue-body version was not archived.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/click-short-help-abbreviation"
+    },
+    {
+      "id": "click-interrupt-race",
+      "repository": "https://github.com/pallets/click",
+      "repository_full_name": "pallets/click",
+      "language": "Python",
+      "title": "Late interrupt during prompt abort",
+      "query": "Ctrl-C during a command prompt can produce an unhandled traceback instead of a graceful abort, depending on interrupt timing. Handle the late interrupt without changing non-standalone behavior.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/pallets/click/issues/3802",
+        "kind": "issue",
+        "created_at": "2026-08-28T16:16:08Z",
+        "updated_at": "2026-09-16T00:30:31Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "08a7bc6d2a2af02268b09b3b5fd8079546c81c03",
+      "base_url": "https://github.com/pallets/click/commit/08a7bc6d2a2af02268b09b3b5fd8079546c81c03",
+      "fix_commit": "fc518e41218b447e875fe27244ae692c269bcb77",
+      "fix_url": "https://github.com/pallets/click/commit/fc518e41218b447e875fe27244ae692c269bcb77",
+      "fix_committed_at": "2026-08-31T20:34:35Z",
+      "comparison_url": "https://github.com/pallets/click/compare/08a7bc6d2a2af02268b09b3b5fd8079546c81c03...fc518e41218b447e875fe27244ae692c269bcb77",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "BSD-3-Clause",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/pallets/click/blob/08a7bc6d2a2af02268b09b3b5fd8079546c81c03/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/click/core.py"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/click/core.py",
+          "name": "Command.main",
+          "start_line": 1484,
+          "end_line": 1595,
+          "start_byte": 56360,
+          "end_byte": 61508,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/pallets/click/blob/08a7bc6d2a2af02268b09b3b5fd8079546c81c03/src/click/core.py#L1484-L1595",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "pyproject.toml",
+          "revision": "08a7bc6d2a2af02268b09b3b5fd8079546c81c03",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/pallets/click/blob/08a7bc6d2a2af02268b09b3b5fd8079546c81c03/pyproject.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "tests/test_abort_interrupt.py",
+          "change": "added",
+          "available_at_base": false,
+          "fix_url": "https://github.com/pallets/click/blob/fc518e41218b447e875fe27244ae692c269bcb77/tests/test_abort_interrupt.py",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Race reproduced only by upstream report, not here. Newly added regression file is held out and absent from the base; existing prompt/exception/stream helpers may be required supporting context.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/click-interrupt-race"
+    },
+    {
+      "id": "click-sentinel-copy",
+      "repository": "https://github.com/pallets/click",
+      "repository_full_name": "pallets/click",
+      "language": "Python",
+      "title": "Sentinel identity under serialization",
+      "query": "Pickling and restoring Click sentinel members fails to recover the original sentinel identity. Serialization round trips should retain the same sentinel member, without changing copy or deepcopy identity behavior.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": null,
+      "base_commit": "420c8fb44eeadb537cae69d2fee3796e808558dd",
+      "base_url": "https://github.com/pallets/click/commit/420c8fb44eeadb537cae69d2fee3796e808558dd",
+      "fix_commit": "f58ca3e81424a35626c8a475eb59ab95589008ce",
+      "fix_url": "https://github.com/pallets/click/commit/f58ca3e81424a35626c8a475eb59ab95589008ce",
+      "fix_committed_at": "2026-08-29T06:53:55Z",
+      "comparison_url": "https://github.com/pallets/click/compare/420c8fb44eeadb537cae69d2fee3796e808558dd...f58ca3e81424a35626c8a475eb59ab95589008ce",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "BSD-3-Clause",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/pallets/click/blob/420c8fb44eeadb537cae69d2fee3796e808558dd/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/click/_utils.py"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/click/_utils.py",
+          "name": "Sentinel",
+          "start_line": 7,
+          "end_line": 19,
+          "start_byte": 69,
+          "end_byte": 383,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/pallets/click/blob/420c8fb44eeadb537cae69d2fee3796e808558dd/src/click/_utils.py#L7-L19",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "tests/test_utils/test_sentinel.py",
+          "revision": "420c8fb44eeadb537cae69d2fee3796e808558dd",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/pallets/click/blob/420c8fb44eeadb537cae69d2fee3796e808558dd/tests/test_utils/test_sentinel.py",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "pyproject.toml",
+          "revision": "420c8fb44eeadb537cae69d2fee3796e808558dd",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/pallets/click/blob/420c8fb44eeadb537cae69d2fee3796e808558dd/pyproject.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "tests/test_utils/test_sentinel.py",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/pallets/click/blob/f58ca3e81424a35626c8a475eb59ab95589008ce/tests/test_utils/test_sentinel.py",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Retrospective commit-and-test-derived query; no earlier issue/PR report was identified. New special methods do not exist at base, so label the existing Sentinel class, not the added methods. The fix adds explicit copy/deepcopy methods too; this research does not establish that ordinary copying itself failed at base.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/click-sentinel-copy"
+    },
+    {
+      "id": "click-help-parameter-collision",
+      "repository": "https://github.com/pallets/click",
+      "repository_full_name": "pallets/click",
+      "language": "Python",
+      "title": "User parameter named help",
+      "query": "A positional parameter named help can be parsed as the automatic boolean help option, causing invalid-boolean or missing-argument errors. Such user parameters should not corrupt ordinary parsing.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/pallets/click/issues/2819",
+        "kind": "issue",
+        "created_at": "2024-12-15T02:14:28Z",
+        "updated_at": "2026-07-25T00:37:03Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "8a4ce842564ae94ab050062db8525196ad476c19",
+      "base_url": "https://github.com/pallets/click/commit/8a4ce842564ae94ab050062db8525196ad476c19",
+      "fix_commit": "3495fba163dd61dea837cd557095df6c21515ac8",
+      "fix_url": "https://github.com/pallets/click/commit/3495fba163dd61dea837cd557095df6c21515ac8",
+      "fix_committed_at": "2026-07-09T12:04:00Z",
+      "comparison_url": "https://github.com/pallets/click/compare/8a4ce842564ae94ab050062db8525196ad476c19...3495fba163dd61dea837cd557095df6c21515ac8",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "BSD-3-Clause",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/pallets/click/blob/8a4ce842564ae94ab050062db8525196ad476c19/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/click/core.py"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/click/core.py",
+          "name": "Command.get_params",
+          "start_line": 1099,
+          "end_line": 1122,
+          "start_byte": 41698,
+          "end_byte": 42524,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/pallets/click/blob/8a4ce842564ae94ab050062db8525196ad476c19/src/click/core.py#L1099-L1122",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/click/core.py",
+          "name": "Command.get_help_option",
+          "start_line": 1151,
+          "end_line": 1176,
+          "start_byte": 43555,
+          "end_byte": 44601,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/pallets/click/blob/8a4ce842564ae94ab050062db8525196ad476c19/src/click/core.py#L1151-L1176",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "tests/test_basic.py",
+          "revision": "8a4ce842564ae94ab050062db8525196ad476c19",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/pallets/click/blob/8a4ce842564ae94ab050062db8525196ad476c19/tests/test_basic.py",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "tests/test_info_dict.py",
+          "revision": "8a4ce842564ae94ab050062db8525196ad476c19",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/pallets/click/blob/8a4ce842564ae94ab050062db8525196ad476c19/tests/test_info_dict.py",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "tests/test_options.py",
+          "revision": "8a4ce842564ae94ab050062db8525196ad476c19",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/pallets/click/blob/8a4ce842564ae94ab050062db8525196ad476c19/tests/test_options.py",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "pyproject.toml",
+          "revision": "8a4ce842564ae94ab050062db8525196ad476c19",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/pallets/click/blob/8a4ce842564ae94ab050062db8525196ad476c19/pyproject.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "tests/test_basic.py",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/pallets/click/blob/3495fba163dd61dea837cd557095df6c21515ac8/tests/test_basic.py",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "tests/test_info_dict.py",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/pallets/click/blob/3495fba163dd61dea837cd557095df6c21515ac8/tests/test_info_dict.py",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "tests/test_options.py",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/pallets/click/blob/3495fba163dd61dea837cd557095df6c21515ac8/tests/test_options.py",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Fix also adds warnings for other parameter-name collisions. Those are secondary scope, not independent tasks; unchanged parameter parsing/decorator helpers are not exhaustively labeled.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/click-help-parameter-collision"
+    },
+    {
+      "id": "click-black-color-zero",
+      "repository": "https://github.com/pallets/click",
+      "repository_full_name": "pallets/click",
+      "language": "Python",
+      "title": "Explicit palette index zero",
+      "query": "Calling style or secho with foreground or background palette index 0 silently omits the requested black color. Preserve explicitly requested palette colors.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/pallets/click/pull/3677",
+        "kind": "pull_request",
+        "created_at": "2026-07-08T11:21:22Z",
+        "updated_at": "2026-07-24T00:34:12Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "7925a3410d7098c28cfca3b2baa6c852666bbd14",
+      "base_url": "https://github.com/pallets/click/commit/7925a3410d7098c28cfca3b2baa6c852666bbd14",
+      "fix_commit": "07c909f23f0f83b5ca137c167b9a134d66201f67",
+      "fix_url": "https://github.com/pallets/click/commit/07c909f23f0f83b5ca137c167b9a134d66201f67",
+      "fix_committed_at": "2026-07-08T14:46:39Z",
+      "comparison_url": "https://github.com/pallets/click/compare/7925a3410d7098c28cfca3b2baa6c852666bbd14...07c909f23f0f83b5ca137c167b9a134d66201f67",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "BSD-3-Clause",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/pallets/click/blob/7925a3410d7098c28cfca3b2baa6c852666bbd14/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/click/termui.py"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/click/termui.py",
+          "name": "_interpret_color",
+          "start_line": 572,
+          "end_line": 580,
+          "start_byte": 20211,
+          "end_byte": 20537,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/pallets/click/blob/7925a3410d7098c28cfca3b2baa6c852666bbd14/src/click/termui.py#L572-L580",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/click/termui.py",
+          "name": "style",
+          "start_line": 583,
+          "end_line": 709,
+          "start_byte": 20539,
+          "end_byte": 25048,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/pallets/click/blob/7925a3410d7098c28cfca3b2baa6c852666bbd14/src/click/termui.py#L583-L709",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "tests/test_utils/test_style.py",
+          "revision": "7925a3410d7098c28cfca3b2baa6c852666bbd14",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/pallets/click/blob/7925a3410d7098c28cfca3b2baa6c852666bbd14/tests/test_utils/test_style.py",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "pyproject.toml",
+          "revision": "7925a3410d7098c28cfca3b2baa6c852666bbd14",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/pallets/click/blob/7925a3410d7098c28cfca3b2baa6c852666bbd14/pyproject.toml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "tests/test_utils/test_style.py",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/pallets/click/blob/07c909f23f0f83b5ca137c167b9a134d66201f67/tests/test_utils/test_style.py",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "behavioral_validation": {
+        "level": "isolated_function_behavior_checked",
+        "performed_on": "2026-10-14",
+        "runtime": "CPython 3.14.6, Windows; -I -B",
+        "path": "src/click/termui.py",
+        "extraction": "Top-level _interpret_color and style function definitions selected by Python AST from pinned raw source; no package/module execution",
+        "cases": [
+          {
+            "expression": "style(\"x\", fg=0, reset=False)",
+            "base_output": "x",
+            "fix_output": "\u001b[38;5;0mx",
+            "base_matches_expected": false,
+            "fix_matches_expected": true
+          },
+          {
+            "expression": "style(\"x\", bg=0, reset=False)",
+            "base_output": "x",
+            "fix_output": "\u001b[48;5;0mx",
+            "base_matches_expected": false,
+            "fix_matches_expected": true
+          }
+        ],
+        "base_excerpt": {
+          "first_line": 572,
+          "last_line": 710,
+          "sha256": "10f75748283bfe0080a9f3cf0c30bec7ac94f04f23e6d251064aa5fcd7e3f1af"
+        },
+        "fix_excerpt": {
+          "first_line": 572,
+          "last_line": 722,
+          "sha256": "240ca3e45388ff335eb34c181f5353eced98b4f10615285623f084ac47034b8f"
+        },
+        "exit_code": 0,
+        "launcher_diagnostic": "Failed to find real location of C:\\Python314\\python.exe",
+        "limitations": [
+          "two palette-zero cases only; reset=False avoids reset constants",
+          "typing namespace and identity gettext supplied by harness",
+          "no upstream test suite or whole-package import",
+          "not an independently reviewed gold label or full-fix acceptance"
+        ],
+        "failed_attempt": "An initial command embedding both complete files exceeded the Windows launcher command limit (206); no Python code executed in that attempt."
+      },
+      "uncertainty": "Fix additionally changes invalid-color validation. This task scores the index-zero bug, not every new validation rule; labels include the adjacent interpreter as proposed support/implementation context. Two palette-zero calls have now been reproduced in isolated extracted functions; full-checkout reproduction and independent causal review remain pending.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/click-black-color-zero"
+    },
+    {
+      "id": "ky-init-nested-leak",
+      "repository": "https://github.com/sindresorhus/ky",
+      "repository_full_name": "sindresorhus/ky",
+      "language": "TypeScript",
+      "title": "Nested request defaults leak",
+      "query": "An init hook that mutates a nested JSON or context object changes the defaults observed by later requests from the same Ky instance. Requests should not unexpectedly inherit earlier hook mutations.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": null,
+      "base_commit": "830ab472fa18e1ba48861b2f36214d4c20a10f5d",
+      "base_url": "https://github.com/sindresorhus/ky/commit/830ab472fa18e1ba48861b2f36214d4c20a10f5d",
+      "fix_commit": "88e24329ed447b46f73183352e6fbce800f585d1",
+      "fix_url": "https://github.com/sindresorhus/ky/commit/88e24329ed447b46f73183352e6fbce800f585d1",
+      "fix_committed_at": "2026-09-12T00:12:24Z",
+      "comparison_url": "https://github.com/sindresorhus/ky/compare/830ab472fa18e1ba48861b2f36214d4c20a10f5d...88e24329ed447b46f73183352e6fbce800f585d1",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "license",
+        "source_url": "https://github.com/sindresorhus/ky/blob/830ab472fa18e1ba48861b2f36214d4c20a10f5d/license",
+        "read_at_base": true
+      },
+      "required_files": [
+        "source/core/Ky.ts",
+        "source/utils/merge.ts"
+      ],
+      "required_source_spans": [
+        {
+          "path": "source/core/Ky.ts",
+          "name": "cloneInitHookOptions",
+          "start_line": 125,
+          "end_line": 141,
+          "start_byte": 4667,
+          "end_byte": 5329,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sindresorhus/ky/blob/830ab472fa18e1ba48861b2f36214d4c20a10f5d/source/core/Ky.ts#L125-L141",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "source/utils/merge.ts",
+          "name": "cloneShallow",
+          "start_line": 91,
+          "end_line": 113,
+          "start_byte": 3117,
+          "end_byte": 3804,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sindresorhus/ky/blob/830ab472fa18e1ba48861b2f36214d4c20a10f5d/source/utils/merge.ts#L91-L113",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "test/hooks.ts",
+          "revision": "830ab472fa18e1ba48861b2f36214d4c20a10f5d",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/830ab472fa18e1ba48861b2f36214d4c20a10f5d/test/hooks.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "package.json",
+          "revision": "830ab472fa18e1ba48861b2f36214d4c20a10f5d",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/830ab472fa18e1ba48861b2f36214d4c20a10f5d/package.json",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "test/hooks.ts",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sindresorhus/ky/blob/88e24329ed447b46f73183352e6fbce800f585d1/test/hooks.ts",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Retrospective commit-and-test-derived query. cloneDeep is newly added and cannot be a base label; existing cloneShallow is proposed context, not proof it is uniquely required. Plain/non-plain, cyclic and shared-reference semantics need independent review.",
+      "source_evidence": {
+        "changed_source_files_read": 2,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/ky-init-nested-leak"
+    },
+    {
+      "id": "ky-json-array-object",
+      "repository": "https://github.com/sindresorhus/ky",
+      "repository_full_name": "sindresorhus/ky",
+      "language": "TypeScript",
+      "title": "Stale entries after JSON overrides",
+      "query": "Overriding nested JSON values between array and object shapes can retain stale entries from instance defaults. The outgoing JSON should reflect the override rather than combine incompatible shapes.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": null,
+      "base_commit": "854608078545442344a29a0714a50b978e6d77e9",
+      "base_url": "https://github.com/sindresorhus/ky/commit/854608078545442344a29a0714a50b978e6d77e9",
+      "fix_commit": "8cf26e0e78d7a734f5e2846bdd65b66a936c13b3",
+      "fix_url": "https://github.com/sindresorhus/ky/commit/8cf26e0e78d7a734f5e2846bdd65b66a936c13b3",
+      "fix_committed_at": "2026-09-12T00:51:40Z",
+      "comparison_url": "https://github.com/sindresorhus/ky/compare/854608078545442344a29a0714a50b978e6d77e9...8cf26e0e78d7a734f5e2846bdd65b66a936c13b3",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "license",
+        "source_url": "https://github.com/sindresorhus/ky/blob/854608078545442344a29a0714a50b978e6d77e9/license",
+        "read_at_base": true
+      },
+      "required_files": [
+        "source/utils/merge.ts"
+      ],
+      "required_source_spans": [
+        {
+          "path": "source/utils/merge.ts",
+          "name": "deepMergeInternal",
+          "start_line": 266,
+          "end_line": 397,
+          "start_byte": 9743,
+          "end_byte": 14751,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sindresorhus/ky/blob/854608078545442344a29a0714a50b978e6d77e9/source/utils/merge.ts#L266-L397",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "test/main.ts",
+          "revision": "854608078545442344a29a0714a50b978e6d77e9",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/854608078545442344a29a0714a50b978e6d77e9/test/main.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "package.json",
+          "revision": "854608078545442344a29a0714a50b978e6d77e9",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/854608078545442344a29a0714a50b978e6d77e9/package.json",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "test/main.ts",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sindresorhus/ky/blob/8cf26e0e78d7a734f5e2846bdd65b66a936c13b3/test/main.ts",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Retrospective commit-and-test-derived query, with no earlier issue report identified. The entire deepMergeInternal is labeled; this is broad compared with the changed condition.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/ky-json-array-object"
+    },
+    {
+      "id": "ky-json-error-utf8",
+      "repository": "https://github.com/sindresorhus/ky",
+      "repository_full_name": "sindresorhus/ky",
+      "language": "TypeScript",
+      "title": "JSON error response decoding",
+      "query": "A JSON error response containing non-ASCII text is decoded incorrectly when its Content-Type declares a conflicting charset. JSON error data should retain the original UTF-8 text.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": null,
+      "base_commit": "3e2d81ab7c4d80f0f22741c64bdc3923bcba4427",
+      "base_url": "https://github.com/sindresorhus/ky/commit/3e2d81ab7c4d80f0f22741c64bdc3923bcba4427",
+      "fix_commit": "854608078545442344a29a0714a50b978e6d77e9",
+      "fix_url": "https://github.com/sindresorhus/ky/commit/854608078545442344a29a0714a50b978e6d77e9",
+      "fix_committed_at": "2026-09-12T00:47:42Z",
+      "comparison_url": "https://github.com/sindresorhus/ky/compare/3e2d81ab7c4d80f0f22741c64bdc3923bcba4427...854608078545442344a29a0714a50b978e6d77e9",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "license",
+        "source_url": "https://github.com/sindresorhus/ky/blob/3e2d81ab7c4d80f0f22741c64bdc3923bcba4427/license",
+        "read_at_base": true
+      },
+      "required_files": [
+        "source/core/Ky.ts"
+      ],
+      "required_source_spans": [
+        {
+          "path": "source/core/Ky.ts",
+          "name": "#readResponseText",
+          "start_line": 860,
+          "end_line": 922,
+          "start_byte": 30349,
+          "end_byte": 31911,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sindresorhus/ky/blob/3e2d81ab7c4d80f0f22741c64bdc3923bcba4427/source/core/Ky.ts#L860-L922",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "test/http-error.ts",
+          "revision": "3e2d81ab7c4d80f0f22741c64bdc3923bcba4427",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/3e2d81ab7c4d80f0f22741c64bdc3923bcba4427/test/http-error.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "package.json",
+          "revision": "3e2d81ab7c4d80f0f22741c64bdc3923bcba4427",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/3e2d81ab7c4d80f0f22741c64bdc3923bcba4427/package.json",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "test/http-error.ts",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sindresorhus/ky/blob/854608078545442344a29a0714a50b978e6d77e9/test/http-error.ts",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Retrospective commit-and-test-derived query. Other text response charset behavior must stay distinct; unchanged decoder and content-type helpers may be necessary support.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/ky-json-error-utf8"
+    },
+    {
+      "id": "ky-init-missing-headers",
+      "repository": "https://github.com/sindresorhus/ky",
+      "repository_full_name": "sindresorhus/ky",
+      "language": "TypeScript",
+      "title": "Header mutation without initial headers",
+      "query": "An init hook that adds a header in place throws when the request and defaults did not supply headers. The hook should receive the documented usable headers object.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": null,
+      "base_commit": "d5bacefa0bf46315aa9964f7df02726bee3c3469",
+      "base_url": "https://github.com/sindresorhus/ky/commit/d5bacefa0bf46315aa9964f7df02726bee3c3469",
+      "fix_commit": "0e2501bc9dbb7da2ed46d51504873a5a7fda1c40",
+      "fix_url": "https://github.com/sindresorhus/ky/commit/0e2501bc9dbb7da2ed46d51504873a5a7fda1c40",
+      "fix_committed_at": "2026-09-12T00:12:24Z",
+      "comparison_url": "https://github.com/sindresorhus/ky/compare/d5bacefa0bf46315aa9964f7df02726bee3c3469...0e2501bc9dbb7da2ed46d51504873a5a7fda1c40",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "license",
+        "source_url": "https://github.com/sindresorhus/ky/blob/d5bacefa0bf46315aa9964f7df02726bee3c3469/license",
+        "read_at_base": true
+      },
+      "required_files": [
+        "source/core/Ky.ts"
+      ],
+      "required_source_spans": [
+        {
+          "path": "source/core/Ky.ts",
+          "name": "cloneInitHookOptions",
+          "start_line": 125,
+          "end_line": 140,
+          "start_byte": 4667,
+          "end_byte": 5186,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sindresorhus/ky/blob/d5bacefa0bf46315aa9964f7df02726bee3c3469/source/core/Ky.ts#L125-L140",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "test/hooks.ts",
+          "revision": "d5bacefa0bf46315aa9964f7df02726bee3c3469",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/d5bacefa0bf46315aa9964f7df02726bee3c3469/test/hooks.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "package.json",
+          "revision": "d5bacefa0bf46315aa9964f7df02726bee3c3469",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/d5bacefa0bf46315aa9964f7df02726bee3c3469/package.json",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "test/hooks.ts",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sindresorhus/ky/blob/0e2501bc9dbb7da2ed46d51504873a5a7fda1c40/test/hooks.ts",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Retrospective commit-and-test-derived query. Hook contracts and default option merging are supporting context; no runtime request was made.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/ky-init-missing-headers"
+    },
+    {
+      "id": "ky-request-header-removal",
+      "repository": "https://github.com/sindresorhus/ky",
+      "repository_full_name": "sindresorhus/ky",
+      "language": "TypeScript",
+      "title": "Removing inherited request headers",
+      "query": "Setting a header to undefined in Ky options does not reliably remove a header inherited from a Request input. Header overrides should work across the documented header container forms.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": null,
+      "base_commit": "91ea8a947747b406273df45777a62f2d91fef5c3",
+      "base_url": "https://github.com/sindresorhus/ky/commit/91ea8a947747b406273df45777a62f2d91fef5c3",
+      "fix_commit": "d5bacefa0bf46315aa9964f7df02726bee3c3469",
+      "fix_url": "https://github.com/sindresorhus/ky/commit/d5bacefa0bf46315aa9964f7df02726bee3c3469",
+      "fix_committed_at": "2026-09-12T00:12:24Z",
+      "comparison_url": "https://github.com/sindresorhus/ky/compare/91ea8a947747b406273df45777a62f2d91fef5c3...d5bacefa0bf46315aa9964f7df02726bee3c3469",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "license",
+        "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/license",
+        "read_at_base": true
+      },
+      "required_files": [
+        "source/utils/merge.ts"
+      ],
+      "required_source_spans": [
+        {
+          "path": "source/utils/merge.ts",
+          "name": "mergeHeaders",
+          "start_line": 64,
+          "end_line": 92,
+          "start_byte": 1903,
+          "end_byte": 2854,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/source/utils/merge.ts#L64-L92",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "source/utils/merge.ts",
+          "name": "mergeHeaderObjects",
+          "start_line": 135,
+          "end_line": 147,
+          "start_byte": 4502,
+          "end_byte": 4934,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/source/utils/merge.ts#L135-L147",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "source/utils/merge.ts",
+          "name": "mergeHeaderContainers",
+          "start_line": 149,
+          "end_line": 155,
+          "start_byte": 4935,
+          "end_byte": 5185,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/source/utils/merge.ts#L149-L155",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "source/core/Ky.ts",
+          "revision": "91ea8a947747b406273df45777a62f2d91fef5c3",
+          "role": "changed_runtime_or_contract_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/source/core/Ky.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "source/types/hooks.ts",
+          "revision": "91ea8a947747b406273df45777a62f2d91fef5c3",
+          "role": "changed_runtime_or_contract_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/source/types/hooks.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "source/types/ky.ts",
+          "revision": "91ea8a947747b406273df45777a62f2d91fef5c3",
+          "role": "changed_runtime_or_contract_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/source/types/ky.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "source/types/options.ts",
+          "revision": "91ea8a947747b406273df45777a62f2d91fef5c3",
+          "role": "changed_runtime_or_contract_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/source/types/options.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "test/headers.ts",
+          "revision": "91ea8a947747b406273df45777a62f2d91fef5c3",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/test/headers.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "test/hooks.ts",
+          "revision": "91ea8a947747b406273df45777a62f2d91fef5c3",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/test/hooks.ts",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "package.json",
+          "revision": "91ea8a947747b406273df45777a62f2d91fef5c3",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/sindresorhus/ky/blob/91ea8a947747b406273df45777a62f2d91fef5c3/package.json",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "test/headers.ts",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sindresorhus/ky/blob/d5bacefa0bf46315aa9964f7df02726bee3c3469/test/headers.ts",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "test/hooks.ts",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/sindresorhus/ky/blob/d5bacefa0bf46315aa9964f7df02726bee3c3469/test/hooks.ts",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Retrospective commit-and-test-derived query. Patch changes docs/types and a nonfunctional comment in Ky.ts; those are supporting rather than required runtime labels. Header casing and duplicate-header behavior enlarge the unresolved label scope.",
+      "source_evidence": {
+        "changed_source_files_read": 5,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/ky-request-header-removal"
+    },
+    {
+      "id": "afero-regexp-create",
+      "repository": "https://github.com/spf13/afero",
+      "repository_full_name": "spf13/afero",
+      "language": "Go",
+      "title": "Creating a matching filtered file",
+      "query": "Opening a missing file through RegexpFs with O_CREATE fails even when its name matches the filter. Matching-file creation should work while disallowed names and real file-system errors remain rejected.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": null,
+      "base_commit": "768f1fb0e5535b77d90e44c531aacd652aabd96a",
+      "base_url": "https://github.com/spf13/afero/commit/768f1fb0e5535b77d90e44c531aacd652aabd96a",
+      "fix_commit": "36101d9aec5096ec864594105467cc6823b54981",
+      "fix_url": "https://github.com/spf13/afero/commit/36101d9aec5096ec864594105467cc6823b54981",
+      "fix_committed_at": "2026-09-22T22:04:18Z",
+      "comparison_url": "https://github.com/spf13/afero/compare/768f1fb0e5535b77d90e44c531aacd652aabd96a...36101d9aec5096ec864594105467cc6823b54981",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "Apache-2.0",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/spf13/afero/blob/768f1fb0e5535b77d90e44c531aacd652aabd96a/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "regexpfs.go"
+      ],
+      "required_source_spans": [
+        {
+          "path": "regexpfs.go",
+          "name": "RegexpFs.OpenFile",
+          "start_line": 118,
+          "end_line": 123,
+          "start_byte": 2235,
+          "end_byte": 2433,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/spf13/afero/blob/768f1fb0e5535b77d90e44c531aacd652aabd96a/regexpfs.go#L118-L123",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "go.mod",
+          "revision": "768f1fb0e5535b77d90e44c531aacd652aabd96a",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/spf13/afero/blob/768f1fb0e5535b77d90e44c531aacd652aabd96a/go.mod",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "regexpfs_test.go",
+          "change": "added",
+          "available_at_base": false,
+          "fix_url": "https://github.com/spf13/afero/blob/36101d9aec5096ec864594105467cc6823b54981/regexpfs_test.go",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Retrospective commit-and-test-derived query. regexpfs_test.go is newly added and held out, not present in the retrieval checkout. No independent create/exclusive/truncate regression execution.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/afero-regexp-create"
+    },
+    {
+      "id": "afero-regexp-basename",
+      "repository": "https://github.com/spf13/afero",
+      "repository_full_name": "spf13/afero",
+      "language": "Go",
+      "title": "Name filter under a directory",
+      "query": "A RegexpFs filter intended to match a file name, such as ^a, rejects a matching file when it is opened under a directory path. Apply the documented file-name filtering semantics consistently.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": null,
+      "base_commit": "defe436bfc75a5d3a118bc66032192a0e55e09bd",
+      "base_url": "https://github.com/spf13/afero/commit/defe436bfc75a5d3a118bc66032192a0e55e09bd",
+      "fix_commit": "37820ac908734fda1cb8b8d52097035befc858af",
+      "fix_url": "https://github.com/spf13/afero/commit/37820ac908734fda1cb8b8d52097035befc858af",
+      "fix_committed_at": "2026-05-07T18:15:41Z",
+      "comparison_url": "https://github.com/spf13/afero/compare/defe436bfc75a5d3a118bc66032192a0e55e09bd...37820ac908734fda1cb8b8d52097035befc858af",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "Apache-2.0",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/spf13/afero/blob/defe436bfc75a5d3a118bc66032192a0e55e09bd/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "regexpfs.go"
+      ],
+      "required_source_spans": [
+        {
+          "path": "regexpfs.go",
+          "name": "RegexpFs.matchesName",
+          "start_line": 27,
+          "end_line": 35,
+          "start_byte": 468,
+          "end_byte": 624,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/spf13/afero/blob/defe436bfc75a5d3a118bc66032192a0e55e09bd/regexpfs.go#L27-L35",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "go.mod",
+          "revision": "defe436bfc75a5d3a118bc66032192a0e55e09bd",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/spf13/afero/blob/defe436bfc75a5d3a118bc66032192a0e55e09bd/go.mod",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Retrospective commit-derived query; the patch contains no regression tests. README contract and separator/platform cases require follow-up validation.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/afero-regexp-basename"
+    },
+    {
+      "id": "afero-close-errors",
+      "repository": "https://github.com/spf13/afero",
+      "repository_full_name": "spf13/afero",
+      "language": "Go",
+      "title": "Writable file close errors",
+      "query": "Writable file close failures may be silently discarded even though closing can flush buffered writes. Callers of union files and reader-to-file helpers need to observe failed completion.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/spf13/afero/pull/339",
+        "kind": "pull_request",
+        "created_at": "2022-02-06T10:25:57Z",
+        "updated_at": "2026-05-07T18:14:13Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "26af649ce6bdf695e9050385c64c554a311599b0",
+      "base_url": "https://github.com/spf13/afero/commit/26af649ce6bdf695e9050385c64c554a311599b0",
+      "fix_commit": "defe436bfc75a5d3a118bc66032192a0e55e09bd",
+      "fix_url": "https://github.com/spf13/afero/commit/defe436bfc75a5d3a118bc66032192a0e55e09bd",
+      "fix_committed_at": "2026-05-07T18:14:10Z",
+      "comparison_url": "https://github.com/spf13/afero/compare/26af649ce6bdf695e9050385c64c554a311599b0...defe436bfc75a5d3a118bc66032192a0e55e09bd",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "Apache-2.0",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/spf13/afero/blob/26af649ce6bdf695e9050385c64c554a311599b0/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "unionFile.go",
+        "util.go"
+      ],
+      "required_source_spans": [
+        {
+          "path": "unionFile.go",
+          "name": "UnionFile.Close",
+          "start_line": 31,
+          "end_line": 42,
+          "start_byte": 813,
+          "end_byte": 1148,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/spf13/afero/blob/26af649ce6bdf695e9050385c64c554a311599b0/unionFile.go#L31-L42",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "util.go",
+          "name": "WriteReader",
+          "start_line": 41,
+          "end_line": 62,
+          "start_byte": 1188,
+          "end_byte": 1578,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/spf13/afero/blob/26af649ce6bdf695e9050385c64c554a311599b0/util.go#L41-L62",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "util.go",
+          "name": "SafeWriteReader",
+          "start_line": 69,
+          "end_line": 96,
+          "start_byte": 1767,
+          "end_byte": 2250,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/spf13/afero/blob/26af649ce6bdf695e9050385c64c554a311599b0/util.go#L69-L96",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "go.mod",
+          "revision": "26af649ce6bdf695e9050385c64c554a311599b0",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/spf13/afero/blob/26af649ce6bdf695e9050385c64c554a311599b0/go.mod",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [],
+      "label_status": "quarantined_fix_regression_risk",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Quarantine: static inspection of this fix's UnionFile.Close shows BADFD is returned when both closes succeed; util.go also changes named error-return plumbing. Fix completeness and compilation were not tested. Do not treat this historical fix as a passing repair oracle.",
+      "source_evidence": {
+        "changed_source_files_read": 2,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/afero-close-errors"
+    },
+    {
+      "id": "afero-readdir-mutation",
+      "repository": "https://github.com/spf13/afero",
+      "repository_full_name": "spf13/afero",
+      "language": "Go",
+      "title": "Chunked reads while a directory changes",
+      "query": "Removing files between chunked MemMapFs directory reads can skip entries or violate slice bounds. A directory traversal should not fail merely because entries change between reads.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/spf13/afero/issues/261",
+        "kind": "issue",
+        "created_at": "2020-08-20T00:16:46Z",
+        "updated_at": "2026-05-07T18:12:25Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "5c5e03d31a90a3b98af0b953daaa93ef06fff6fa",
+      "base_url": "https://github.com/spf13/afero/commit/5c5e03d31a90a3b98af0b953daaa93ef06fff6fa",
+      "fix_commit": "e8875b6404002be03a1701f0cfa150e4593aea3d",
+      "fix_url": "https://github.com/spf13/afero/commit/e8875b6404002be03a1701f0cfa150e4593aea3d",
+      "fix_committed_at": "2026-05-07T18:12:22Z",
+      "comparison_url": "https://github.com/spf13/afero/compare/5c5e03d31a90a3b98af0b953daaa93ef06fff6fa...e8875b6404002be03a1701f0cfa150e4593aea3d",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "Apache-2.0",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/spf13/afero/blob/5c5e03d31a90a3b98af0b953daaa93ef06fff6fa/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "mem/file.go"
+      ],
+      "required_source_spans": [
+        {
+          "path": "mem/file.go",
+          "name": "File.Readdir",
+          "start_line": 154,
+          "end_line": 187,
+          "start_byte": 2929,
+          "end_byte": 3599,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/spf13/afero/blob/5c5e03d31a90a3b98af0b953daaa93ef06fff6fa/mem/file.go#L154-L187",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "go.mod",
+          "revision": "5c5e03d31a90a3b98af0b953daaa93ef06fff6fa",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/spf13/afero/blob/5c5e03d31a90a3b98af0b953daaa93ef06fff6fa/go.mod",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Upstream issue is older than the fix; the fix adds no tests. Required span is Readdir, but File.Open/reset state and memDir.Files behavior remain possible additional labels.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/afero-readdir-mutation"
+    },
+    {
+      "id": "afero-tar-independent-handles",
+      "repository": "https://github.com/spf13/afero",
+      "repository_full_name": "spf13/afero",
+      "language": "Go",
+      "title": "Independent tar file handles",
+      "query": "Reading or closing one handle for a tarfs file affects later or simultaneous handles to the same path. Independent opens should have independent read positions and remain readable.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/spf13/afero/issues/486",
+        "kind": "issue",
+        "created_at": "2025-04-02T20:30:37Z",
+        "updated_at": "2026-05-07T18:07:52Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "7511d5e706648e0fd974ba6305ecd0aa30ede1c5",
+      "base_url": "https://github.com/spf13/afero/commit/7511d5e706648e0fd974ba6305ecd0aa30ede1c5",
+      "fix_commit": "22177ff6c4f5183fd7050c2d0d4c9dfd053afb67",
+      "fix_url": "https://github.com/spf13/afero/commit/22177ff6c4f5183fd7050c2d0d4c9dfd053afb67",
+      "fix_committed_at": "2026-05-07T18:07:49Z",
+      "comparison_url": "https://github.com/spf13/afero/compare/7511d5e706648e0fd974ba6305ecd0aa30ede1c5...22177ff6c4f5183fd7050c2d0d4c9dfd053afb67",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "Apache-2.0",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/spf13/afero/blob/7511d5e706648e0fd974ba6305ecd0aa30ede1c5/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "tarfs/fs.go"
+      ],
+      "required_source_spans": [
+        {
+          "path": "tarfs/fs.go",
+          "name": "New",
+          "start_line": 31,
+          "end_line": 81,
+          "start_byte": 506,
+          "end_byte": 1446,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/spf13/afero/blob/7511d5e706648e0fd974ba6305ecd0aa30ede1c5/tarfs/fs.go#L31-L81",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "tarfs/fs.go",
+          "name": "Fs.Open",
+          "start_line": 83,
+          "end_line": 97,
+          "start_byte": 1447,
+          "end_byte": 1783,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/spf13/afero/blob/7511d5e706648e0fd974ba6305ecd0aa30ede1c5/tarfs/fs.go#L83-L97",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "go.mod",
+          "revision": "7511d5e706648e0fd974ba6305ecd0aa30ede1c5",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/spf13/afero/blob/7511d5e706648e0fd974ba6305ecd0aa30ede1c5/go.mod",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Existing tarfs/tarfs_test.go is available at base; its new assertions are held out. Unchanged tarfs/file.go is important potential supporting context and needs explicit review before full causal-span scoring.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/afero-tar-independent-handles"
+    },
+    {
+      "id": "jsoup-tracking-formatting",
+      "repository": "https://github.com/jhy/jsoup",
+      "repository_full_name": "jhy/jsoup",
+      "language": "Java",
+      "title": "Source tracking changes parsed structure",
+      "query": "Parsing repeated formatting tags with source-position tracking enabled reconstructs more active formatting elements than the same parse without tracking. Tracking should not change the resulting DOM structure.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/jhy/jsoup/issues/2633",
+        "kind": "issue",
+        "created_at": "2026-09-28T07:03:38Z",
+        "updated_at": "2026-09-28T07:06:26Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "ea6d5bae43ada574e650814690ffa3622416daa6",
+      "base_url": "https://github.com/jhy/jsoup/commit/ea6d5bae43ada574e650814690ffa3622416daa6",
+      "fix_commit": "118acb619ea8ad6a8dbcd829edda9d4e1c0f3dcf",
+      "fix_url": "https://github.com/jhy/jsoup/commit/118acb619ea8ad6a8dbcd829edda9d4e1c0f3dcf",
+      "fix_committed_at": "2026-09-28T07:05:52Z",
+      "comparison_url": "https://github.com/jhy/jsoup/compare/ea6d5bae43ada574e650814690ffa3622416daa6...118acb619ea8ad6a8dbcd829edda9d4e1c0f3dcf",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE",
+        "source_url": "https://github.com/jhy/jsoup/blob/ea6d5bae43ada574e650814690ffa3622416daa6/LICENSE",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/main/java/org/jsoup/nodes/Attributes.java"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/main/java/org/jsoup/nodes/Attributes.java",
+          "name": "Attributes.equals",
+          "start_line": 605,
+          "end_line": 619,
+          "start_byte": 21709,
+          "end_byte": 22249,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/ea6d5bae43ada574e650814690ffa3622416daa6/src/main/java/org/jsoup/nodes/Attributes.java#L605-L619",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/main/java/org/jsoup/nodes/Attributes.java",
+          "name": "Attributes.hashCode",
+          "start_line": 626,
+          "end_line": 631,
+          "start_byte": 22424,
+          "end_byte": 22616,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/ea6d5bae43ada574e650814690ffa3622416daa6/src/main/java/org/jsoup/nodes/Attributes.java#L626-L631",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "src/test/java/org/jsoup/nodes/AttributesTest.java",
+          "revision": "ea6d5bae43ada574e650814690ffa3622416daa6",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/ea6d5bae43ada574e650814690ffa3622416daa6/src/test/java/org/jsoup/nodes/AttributesTest.java",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "src/test/java/org/jsoup/parser/HtmlParserTest.java",
+          "revision": "ea6d5bae43ada574e650814690ffa3622416daa6",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/ea6d5bae43ada574e650814690ffa3622416daa6/src/test/java/org/jsoup/parser/HtmlParserTest.java",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "pom.xml",
+          "revision": "ea6d5bae43ada574e650814690ffa3622416daa6",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/ea6d5bae43ada574e650814690ffa3622416daa6/pom.xml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "src/test/java/org/jsoup/nodes/AttributesTest.java",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/jhy/jsoup/blob/118acb619ea8ad6a8dbcd829edda9d4e1c0f3dcf/src/test/java/org/jsoup/nodes/AttributesTest.java",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "src/test/java/org/jsoup/parser/HtmlParserTest.java",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/jhy/jsoup/blob/118acb619ea8ad6a8dbcd829edda9d4e1c0f3dcf/src/test/java/org/jsoup/parser/HtmlParserTest.java",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Query deliberately omits issue-body diagnosis and fix symbols. Labels infer Attributes equality/hash behavior from the patch; unchanged adoption-algorithm callers may be necessary supporting code.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/jsoup-tracking-formatting"
+    },
+    {
+      "id": "jsoup-malformed-end-tag",
+      "repository": "https://github.com/jhy/jsoup",
+      "repository_full_name": "jhy/jsoup",
+      "language": "Java",
+      "title": "Malformed end-tag comment content",
+      "query": "The malformed HTML end tag </ COMMENT > creates a comment containing an extra slash. Its recovered comment content should agree with the documented parsing expectation.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/jhy/jsoup/issues/2631",
+        "kind": "issue",
+        "created_at": "2026-09-27T04:42:42Z",
+        "updated_at": "2026-09-27T04:45:19Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "37aea49902972cec9a53dc2c65023729f1c3715b",
+      "base_url": "https://github.com/jhy/jsoup/commit/37aea49902972cec9a53dc2c65023729f1c3715b",
+      "fix_commit": "81718491972c21a911c5964b2cae06fdc201dfb3",
+      "fix_url": "https://github.com/jhy/jsoup/commit/81718491972c21a911c5964b2cae06fdc201dfb3",
+      "fix_committed_at": "2026-09-27T04:44:59Z",
+      "comparison_url": "https://github.com/jhy/jsoup/compare/37aea49902972cec9a53dc2c65023729f1c3715b...81718491972c21a911c5964b2cae06fdc201dfb3",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE",
+        "source_url": "https://github.com/jhy/jsoup/blob/37aea49902972cec9a53dc2c65023729f1c3715b/LICENSE",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/main/java/org/jsoup/parser/TokeniserState.java"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/main/java/org/jsoup/parser/TokeniserState.java",
+          "name": "EndTagOpen",
+          "start_line": 128,
+          "end_line": 147,
+          "start_byte": 4182,
+          "end_byte": 4896,
+          "label_kind": "enum_state",
+          "source_url": "https://github.com/jhy/jsoup/blob/37aea49902972cec9a53dc2c65023729f1c3715b/src/main/java/org/jsoup/parser/TokeniserState.java#L128-L147",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "src/test/java/org/jsoup/parser/HtmlParserTest.java",
+          "revision": "37aea49902972cec9a53dc2c65023729f1c3715b",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/37aea49902972cec9a53dc2c65023729f1c3715b/src/test/java/org/jsoup/parser/HtmlParserTest.java",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "src/test/java/org/jsoup/parser/TokeniserStateTest.java",
+          "revision": "37aea49902972cec9a53dc2c65023729f1c3715b",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/37aea49902972cec9a53dc2c65023729f1c3715b/src/test/java/org/jsoup/parser/TokeniserStateTest.java",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "pom.xml",
+          "revision": "37aea49902972cec9a53dc2c65023729f1c3715b",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/37aea49902972cec9a53dc2c65023729f1c3715b/pom.xml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "src/test/java/org/jsoup/parser/HtmlParserTest.java",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/jhy/jsoup/blob/81718491972c21a911c5964b2cae06fdc201dfb3/src/test/java/org/jsoup/parser/HtmlParserTest.java",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "src/test/java/org/jsoup/parser/TokeniserStateTest.java",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/jhy/jsoup/blob/81718491972c21a911c5964b2cae06fdc201dfb3/src/test/java/org/jsoup/parser/TokeniserStateTest.java",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Label is the EndTagOpen enum-state block including read, not every read overload in TokeniserState. HTML and XML behavior should not be conflated.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/jsoup-malformed-end-tag"
+    },
+    {
+      "id": "jsoup-node-self-insert",
+      "repository": "https://github.com/jhy/jsoup",
+      "repository_full_name": "jhy/jsoup",
+      "language": "Java",
+      "title": "Inserting a node next to itself",
+      "query": "Calling before or after with the receiver node itself throws a NullPointerException and can detach the node from its document. The operation must not unexpectedly mutate the document or lose the node.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/jhy/jsoup/issues/2628",
+        "kind": "issue",
+        "created_at": "2026-09-24T01:54:23Z",
+        "updated_at": "2026-09-24T02:34:08Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "5fe93bffc080529027d051679cb7f5cc3a24cf0d",
+      "base_url": "https://github.com/jhy/jsoup/commit/5fe93bffc080529027d051679cb7f5cc3a24cf0d",
+      "fix_commit": "12390349fab508968ca1a7309f3149d7e9f09029",
+      "fix_url": "https://github.com/jhy/jsoup/commit/12390349fab508968ca1a7309f3149d7e9f09029",
+      "fix_committed_at": "2026-09-24T02:33:26Z",
+      "comparison_url": "https://github.com/jhy/jsoup/compare/5fe93bffc080529027d051679cb7f5cc3a24cf0d...12390349fab508968ca1a7309f3149d7e9f09029",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE",
+        "source_url": "https://github.com/jhy/jsoup/blob/5fe93bffc080529027d051679cb7f5cc3a24cf0d/LICENSE",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/main/java/org/jsoup/nodes/Node.java"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/main/java/org/jsoup/nodes/Node.java",
+          "name": "Node.before(Node)",
+          "start_line": 403,
+          "end_line": 412,
+          "start_byte": 13707,
+          "end_byte": 14058,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/5fe93bffc080529027d051679cb7f5cc3a24cf0d/src/main/java/org/jsoup/nodes/Node.java#L403-L412",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/main/java/org/jsoup/nodes/Node.java",
+          "name": "Node.after(Node)",
+          "start_line": 431,
+          "end_line": 440,
+          "start_byte": 14603,
+          "end_byte": 14957,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/5fe93bffc080529027d051679cb7f5cc3a24cf0d/src/main/java/org/jsoup/nodes/Node.java#L431-L440",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "src/test/java/org/jsoup/nodes/NodeTest.java",
+          "revision": "5fe93bffc080529027d051679cb7f5cc3a24cf0d",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/5fe93bffc080529027d051679cb7f5cc3a24cf0d/src/test/java/org/jsoup/nodes/NodeTest.java",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "pom.xml",
+          "revision": "5fe93bffc080529027d051679cb7f5cc3a24cf0d",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/5fe93bffc080529027d051679cb7f5cc3a24cf0d/pom.xml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "src/test/java/org/jsoup/nodes/NodeTest.java",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/jhy/jsoup/blob/12390349fab508968ca1a7309f3149d7e9f09029/src/test/java/org/jsoup/nodes/NodeTest.java",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Existing NodeTest is available; self-insert assertions are held out. Root/detached-node behavior and validation order are not fully specified by this task.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/jsoup-node-self-insert"
+    },
+    {
+      "id": "jsoup-script-double-escape",
+      "repository": "https://github.com/jhy/jsoup",
+      "repository_full_name": "jhy/jsoup",
+      "language": "Java",
+      "title": "Premature script text termination",
+      "query": "A script in the body containing a comment opener and nested script marker closes at an inner end marker, leaving trailing script text outside. Preserve the intended script text, including mixed-case marker variants.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/jhy/jsoup/issues/2627",
+        "kind": "issue",
+        "created_at": "2026-09-24T01:34:58Z",
+        "updated_at": "2026-09-24T01:44:07Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "49a15317317970a7ea3f0a5ded303ef319860f4a",
+      "base_url": "https://github.com/jhy/jsoup/commit/49a15317317970a7ea3f0a5ded303ef319860f4a",
+      "fix_commit": "f79f21d251453fcf9efc1fe98ca6878e25df5bfc",
+      "fix_url": "https://github.com/jhy/jsoup/commit/f79f21d251453fcf9efc1fe98ca6878e25df5bfc",
+      "fix_committed_at": "2026-09-24T01:37:34Z",
+      "comparison_url": "https://github.com/jhy/jsoup/compare/49a15317317970a7ea3f0a5ded303ef319860f4a...f79f21d251453fcf9efc1fe98ca6878e25df5bfc",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE",
+        "source_url": "https://github.com/jhy/jsoup/blob/49a15317317970a7ea3f0a5ded303ef319860f4a/LICENSE",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/main/java/org/jsoup/parser/HtmlTreeBuilderState.java",
+        "src/main/java/org/jsoup/parser/TokeniserState.java"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/main/java/org/jsoup/parser/HtmlTreeBuilderState.java",
+          "name": "inBodyStartTag",
+          "start_line": 289,
+          "end_line": 647,
+          "start_byte": 12244,
+          "end_byte": 28251,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/49a15317317970a7ea3f0a5ded303ef319860f4a/src/main/java/org/jsoup/parser/HtmlTreeBuilderState.java#L289-L647",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/main/java/org/jsoup/parser/TokeniserState.java",
+          "name": "ScriptDataEscapedLessthanSign",
+          "start_line": 361,
+          "end_line": 376,
+          "start_byte": 11732,
+          "end_byte": 12328,
+          "label_kind": "enum_state",
+          "source_url": "https://github.com/jhy/jsoup/blob/49a15317317970a7ea3f0a5ded303ef319860f4a/src/main/java/org/jsoup/parser/TokeniserState.java#L361-L376",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/main/java/org/jsoup/parser/TokeniserState.java",
+          "name": "handleDataDoubleEscapeTag",
+          "start_line": 1838,
+          "end_line": 1865,
+          "start_byte": 65643,
+          "end_byte": 66496,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/49a15317317970a7ea3f0a5ded303ef319860f4a/src/main/java/org/jsoup/parser/TokeniserState.java#L1838-L1865",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "src/test/java/org/jsoup/parser/HtmlTreeBuilderTest.java",
+          "revision": "49a15317317970a7ea3f0a5ded303ef319860f4a",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/49a15317317970a7ea3f0a5ded303ef319860f4a/src/test/java/org/jsoup/parser/HtmlTreeBuilderTest.java",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "src/test/java/org/jsoup/parser/TokeniserStateTest.java",
+          "revision": "49a15317317970a7ea3f0a5ded303ef319860f4a",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/49a15317317970a7ea3f0a5ded303ef319860f4a/src/test/java/org/jsoup/parser/TokeniserStateTest.java",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "pom.xml",
+          "revision": "49a15317317970a7ea3f0a5ded303ef319860f4a",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/49a15317317970a7ea3f0a5ded303ef319860f4a/pom.xml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "src/test/java/org/jsoup/parser/HtmlTreeBuilderTest.java",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/jhy/jsoup/blob/f79f21d251453fcf9efc1fe98ca6878e25df5bfc/src/test/java/org/jsoup/parser/HtmlTreeBuilderTest.java",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "src/test/java/org/jsoup/parser/TokeniserStateTest.java",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/jhy/jsoup/blob/f79f21d251453fcf9efc1fe98ca6878e25df5bfc/src/test/java/org/jsoup/parser/TokeniserStateTest.java",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Two source files and one large dispatch method are required candidates. Query draws body case from earlier issue and mixed-case symptom from the fix's tests; the mixed-case extension is retrospective.",
+      "source_evidence": {
+        "changed_source_files_read": 2,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/jsoup-script-double-escape"
+    },
+    {
+      "id": "jsoup-void-children",
+      "repository": "https://github.com/jhy/jsoup",
+      "repository_full_name": "jhy/jsoup",
+      "language": "Java",
+      "title": "Serializing manipulated void elements",
+      "query": "After DOM manipulation adds children to an HTML void element, serializing HTML emits those children and inconsistent markup. Serialization should respect void-element behavior without losing children from similarly named foreign elements.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/jhy/jsoup/issues/2619",
+        "kind": "issue",
+        "created_at": "2026-09-23T06:51:00Z",
+        "updated_at": "2026-09-23T06:53:33Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "387c6e1234bbcd175e371774b2f4d5962c07f1c0",
+      "base_url": "https://github.com/jhy/jsoup/commit/387c6e1234bbcd175e371774b2f4d5962c07f1c0",
+      "fix_commit": "b523b7aa713c70dcbbde1ce58ac2a60966a4d892",
+      "fix_url": "https://github.com/jhy/jsoup/commit/b523b7aa713c70dcbbde1ce58ac2a60966a4d892",
+      "fix_committed_at": "2026-09-23T06:53:05Z",
+      "comparison_url": "https://github.com/jhy/jsoup/compare/387c6e1234bbcd175e371774b2f4d5962c07f1c0...b523b7aa713c70dcbbde1ce58ac2a60966a4d892",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE",
+        "source_url": "https://github.com/jhy/jsoup/blob/387c6e1234bbcd175e371774b2f4d5962c07f1c0/LICENSE",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/main/java/org/jsoup/nodes/Element.java",
+        "src/main/java/org/jsoup/nodes/Printer.java"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/main/java/org/jsoup/nodes/Element.java",
+          "name": "outerHtmlHead",
+          "start_line": 1999,
+          "end_line": 2016,
+          "start_byte": 77098,
+          "end_byte": 77898,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/387c6e1234bbcd175e371774b2f4d5962c07f1c0/src/main/java/org/jsoup/nodes/Element.java#L1999-L2016",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/main/java/org/jsoup/nodes/Element.java",
+          "name": "html(QuietAppendable)",
+          "start_line": 2062,
+          "end_line": 2071,
+          "start_byte": 79576,
+          "end_byte": 79895,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/387c6e1234bbcd175e371774b2f4d5962c07f1c0/src/main/java/org/jsoup/nodes/Element.java#L2062-L2071",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/main/java/org/jsoup/nodes/Printer.java",
+          "name": "Printer.head",
+          "start_line": 56,
+          "end_line": 60,
+          "start_byte": 1879,
+          "end_byte": 2211,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/387c6e1234bbcd175e371774b2f4d5962c07f1c0/src/main/java/org/jsoup/nodes/Printer.java#L56-L60",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/main/java/org/jsoup/nodes/Printer.java",
+          "name": "Printer.tail",
+          "start_line": 63,
+          "end_line": 67,
+          "start_byte": 2226,
+          "end_byte": 2394,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/jhy/jsoup/blob/387c6e1234bbcd175e371774b2f4d5962c07f1c0/src/main/java/org/jsoup/nodes/Printer.java#L63-L67",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "src/test/java/org/jsoup/nodes/ElementTest.java",
+          "revision": "387c6e1234bbcd175e371774b2f4d5962c07f1c0",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/387c6e1234bbcd175e371774b2f4d5962c07f1c0/src/test/java/org/jsoup/nodes/ElementTest.java",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "pom.xml",
+          "revision": "387c6e1234bbcd175e371774b2f4d5962c07f1c0",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/jhy/jsoup/blob/387c6e1234bbcd175e371774b2f4d5962c07f1c0/pom.xml",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "src/test/java/org/jsoup/nodes/ElementTest.java",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/jhy/jsoup/blob/b523b7aa713c70dcbbde1ce58ac2a60966a4d892/src/test/java/org/jsoup/nodes/ElementTest.java",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Foreign-namespace distinction is reconstructed from fix tests. Existing visitor/filter infrastructure is unchanged supporting context; implementation coverage cannot be credited from a class signature map.",
+      "source_evidence": {
+        "changed_source_files_read": 2,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/jsoup-void-children"
+    },
+    {
+      "id": "arduinojson-long-numeric-string",
+      "repository": "https://github.com/bblanchon/ArduinoJson",
+      "repository_full_name": "bblanchon/ArduinoJson",
+      "language": "C++ (Arduino-compatible)",
+      "title": "Long numeric strings during conversion",
+      "query": "Converting a JSON string containing a very long decimal number to a numeric type can crash with a buffer overrun. Such input should not access memory outside valid bounds.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/bblanchon/ArduinoJson/issues/2220",
+        "kind": "issue",
+        "created_at": "2026-03-01T02:46:49Z",
+        "updated_at": "2026-04-05T00:42:02Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "ab8c9be6099af1915bdfec0ea482002bdc0e90de",
+      "base_url": "https://github.com/bblanchon/ArduinoJson/commit/ab8c9be6099af1915bdfec0ea482002bdc0e90de",
+      "fix_commit": "5ccf645dc1be17a6d7223287c46d4eea649661dc",
+      "fix_url": "https://github.com/bblanchon/ArduinoJson/commit/5ccf645dc1be17a6d7223287c46d4eea649661dc",
+      "fix_committed_at": "2026-03-03T16:53:57Z",
+      "comparison_url": "https://github.com/bblanchon/ArduinoJson/compare/ab8c9be6099af1915bdfec0ea482002bdc0e90de...5ccf645dc1be17a6d7223287c46d4eea649661dc",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/bblanchon/ArduinoJson/blob/ab8c9be6099af1915bdfec0ea482002bdc0e90de/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/ArduinoJson/Numbers/FloatTraits.hpp"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/ArduinoJson/Numbers/FloatTraits.hpp",
+          "name": "make_float",
+          "start_line": 195,
+          "end_line": 210,
+          "start_byte": 6131,
+          "end_byte": 6558,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/ab8c9be6099af1915bdfec0ea482002bdc0e90de/src/ArduinoJson/Numbers/FloatTraits.hpp#L195-L210",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "extras/tests/Numbers/parseDouble.cpp",
+          "revision": "ab8c9be6099af1915bdfec0ea482002bdc0e90de",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/ab8c9be6099af1915bdfec0ea482002bdc0e90de/extras/tests/Numbers/parseDouble.cpp",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "extras/tests/CMakeLists.txt",
+          "revision": "ab8c9be6099af1915bdfec0ea482002bdc0e90de",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/ab8c9be6099af1915bdfec0ea482002bdc0e90de/extras/tests/CMakeLists.txt",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "extras/tests/Numbers/parseDouble.cpp",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/bblanchon/ArduinoJson/blob/5ccf645dc1be17a6d7223287c46d4eea649661dc/extras/tests/Numbers/parseDouble.cpp",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Security-sensitive upstream report; only a symptom paraphrase is supplied to retrieval, not its root-cause analysis or reproducer. No sanitizer or device run was performed. parseNumber and conversion callers remain important supporting context.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/arduinojson-long-numeric-string"
+    },
+    {
+      "id": "arduinojson-due-truncated-strings",
+      "repository": "https://github.com/bblanchon/ArduinoJson",
+      "repository_full_name": "bblanchon/ArduinoJson",
+      "language": "C++ (Arduino-compatible)",
+      "title": "Truncated strings on Arduino Due",
+      "query": "On Arduino Due, serializing an object can emit only the first character of each key and string value after upgrading the library. Preserve complete strings on the affected Arduino core.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/bblanchon/ArduinoJson/issues/2181",
+        "kind": "issue",
+        "created_at": "2025-05-22T20:02:55Z",
+        "updated_at": "2025-07-21T00:30:13Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "411424b74eae641b1f2f248c33e85f1ab3f1f694",
+      "base_url": "https://github.com/bblanchon/ArduinoJson/commit/411424b74eae641b1f2f248c33e85f1ab3f1f694",
+      "fix_commit": "f051f8328d3acce6c674dbeebee9f32b9665c7e6",
+      "fix_url": "https://github.com/bblanchon/ArduinoJson/commit/f051f8328d3acce6c674dbeebee9f32b9665c7e6",
+      "fix_committed_at": "2025-06-19T11:59:15Z",
+      "comparison_url": "https://github.com/bblanchon/ArduinoJson/compare/411424b74eae641b1f2f248c33e85f1ab3f1f694...f051f8328d3acce6c674dbeebee9f32b9665c7e6",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/bblanchon/ArduinoJson/blob/411424b74eae641b1f2f248c33e85f1ab3f1f694/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/ArduinoJson.hpp"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/ArduinoJson.hpp",
+          "name": "header macro/include ordering",
+          "start_line": 1,
+          "end_line": 56,
+          "start_byte": 0,
+          "end_byte": 2059,
+          "label_kind": "translation_unit",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/411424b74eae641b1f2f248c33e85f1ab3f1f694/src/ArduinoJson.hpp#L1-L56",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "extras/tests/Misc/CMakeLists.txt",
+          "revision": "411424b74eae641b1f2f248c33e85f1ab3f1f694",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/411424b74eae641b1f2f248c33e85f1ab3f1f694/extras/tests/Misc/CMakeLists.txt",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "extras/tests/CMakeLists.txt",
+          "revision": "411424b74eae641b1f2f248c33e85f1ab3f1f694",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/411424b74eae641b1f2f248c33e85f1ab3f1f694/extras/tests/CMakeLists.txt",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "extras/tests/Misc/CMakeLists.txt",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/bblanchon/ArduinoJson/blob/f051f8328d3acce6c674dbeebee9f32b9665c7e6/extras/tests/Misc/CMakeLists.txt",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "extras/tests/Misc/issue2181.cpp",
+          "change": "added",
+          "available_at_base": false,
+          "fix_url": "https://github.com/bblanchon/ArduinoJson/blob/f051f8328d3acce6c674dbeebee9f32b9665c7e6/extras/tests/Misc/issue2181.cpp",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Required label is a translation-unit include/preprocessor region, not a symbol. Arduino core dependency and macro environment are not vendored or pinned here. No firmware compilation, flashing or device validation.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/arduinojson-due-truncated-strings"
+    },
+    {
+      "id": "arduinojson-tiny-flash-string",
+      "repository": "https://github.com/bblanchon/ArduinoJson",
+      "repository_full_name": "bblanchon/ArduinoJson",
+      "language": "C++ (Arduino-compatible)",
+      "title": "Short Flash-string keys crash",
+      "query": "After upgrading ArduinoJson, using a short F()-wrapped key such as uid causes an assertion or crash, while the equivalent ordinary string key works.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/bblanchon/ArduinoJson/issues/2170",
+        "kind": "issue",
+        "created_at": "2025-04-10T20:51:03Z",
+        "updated_at": "2025-05-12T00:27:29Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "96281de68284f5675dbda29af5613359697139c6",
+      "base_url": "https://github.com/bblanchon/ArduinoJson/commit/96281de68284f5675dbda29af5613359697139c6",
+      "fix_commit": "deab127a2fc846c80fe4691489e54fcf9fe2f95f",
+      "fix_url": "https://github.com/bblanchon/ArduinoJson/commit/deab127a2fc846c80fe4691489e54fcf9fe2f95f",
+      "fix_committed_at": "2025-04-11T08:23:43Z",
+      "comparison_url": "https://github.com/bblanchon/ArduinoJson/compare/96281de68284f5675dbda29af5613359697139c6...deab127a2fc846c80fe4691489e54fcf9fe2f95f",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/bblanchon/ArduinoJson/blob/96281de68284f5675dbda29af5613359697139c6/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/ArduinoJson/Memory/StringBuffer.hpp",
+        "src/ArduinoJson/Memory/StringBuilder.hpp",
+        "src/ArduinoJson/Variant/VariantData.hpp",
+        "src/ArduinoJson/Variant/VariantImpl.hpp"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/ArduinoJson/Memory/StringBuffer.hpp",
+          "name": "StringBuffer::save",
+          "start_line": 40,
+          "end_line": 47,
+          "start_byte": 934,
+          "end_byte": 1194,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/96281de68284f5675dbda29af5613359697139c6/src/ArduinoJson/Memory/StringBuffer.hpp#L40-L47",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/ArduinoJson/Memory/StringBuilder.hpp",
+          "name": "StringBuilder::save",
+          "start_line": 28,
+          "end_line": 49,
+          "start_byte": 547,
+          "end_byte": 1226,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/96281de68284f5675dbda29af5613359697139c6/src/ArduinoJson/Memory/StringBuilder.hpp#L28-L49",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/ArduinoJson/Variant/VariantData.hpp",
+          "name": "VariantData::setTinyString",
+          "start_line": 529,
+          "end_line": 536,
+          "start_byte": 14989,
+          "end_byte": 15295,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/96281de68284f5675dbda29af5613359697139c6/src/ArduinoJson/Variant/VariantData.hpp#L529-L536",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        },
+        {
+          "path": "src/ArduinoJson/Variant/VariantImpl.hpp",
+          "name": "VariantData::setString",
+          "start_line": 21,
+          "end_line": 46,
+          "start_byte": 595,
+          "end_byte": 1197,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/96281de68284f5675dbda29af5613359697139c6/src/ArduinoJson/Variant/VariantImpl.hpp#L21-L46",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "extras/tests/JsonDocument/set.cpp",
+          "revision": "96281de68284f5675dbda29af5613359697139c6",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/96281de68284f5675dbda29af5613359697139c6/extras/tests/JsonDocument/set.cpp",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "extras/tests/CMakeLists.txt",
+          "revision": "96281de68284f5675dbda29af5613359697139c6",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/96281de68284f5675dbda29af5613359697139c6/extras/tests/CMakeLists.txt",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "extras/tests/JsonDocument/set.cpp",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/bblanchon/ArduinoJson/blob/deab127a2fc846c80fe4691489e54fcf9fe2f95f/extras/tests/JsonDocument/set.cpp",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Four changed existing string-storage functions are labeled, but target Flash-string adapters and architecture-specific reads are unresolved support. Upstream report concerns ESP32; host tests alone would not establish hardware acceptance.",
+      "source_evidence": {
+        "changed_source_files_read": 4,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/arduinojson-tiny-flash-string"
+    },
+    {
+      "id": "arduinojson-const-char-array",
+      "repository": "https://github.com/bblanchon/ArduinoJson",
+      "repository_full_name": "bblanchon/ArduinoJson",
+      "language": "C++ (Arduino-compatible)",
+      "title": "Static const character-array keys",
+      "query": "A static const char array key declared in a class and defined separately no longer works as a JSON object key after an upgrade, producing a compile-time assignment error. Preserve support for this key form.",
+      "query_provenance": "earlier_official_report_symptom_paraphrase",
+      "problem_evidence": {
+        "url": "https://github.com/bblanchon/ArduinoJson/issues/2166",
+        "kind": "issue",
+        "created_at": "2025-04-03T19:35:11Z",
+        "updated_at": "2025-05-11T00:27:46Z",
+        "relation": "direct_report",
+        "historical_body_snapshot_verified": false
+      },
+      "base_commit": "91397f9f06f719ba185cc7b48aff4763d6529eea",
+      "base_url": "https://github.com/bblanchon/ArduinoJson/commit/91397f9f06f719ba185cc7b48aff4763d6529eea",
+      "fix_commit": "f0e84e4933b0d4120cd30ac1e0054ae67319f773",
+      "fix_url": "https://github.com/bblanchon/ArduinoJson/commit/f0e84e4933b0d4120cd30ac1e0054ae67319f773",
+      "fix_committed_at": "2025-04-09T06:55:09Z",
+      "comparison_url": "https://github.com/bblanchon/ArduinoJson/compare/91397f9f06f719ba185cc7b48aff4763d6529eea...f0e84e4933b0d4120cd30ac1e0054ae67319f773",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/bblanchon/ArduinoJson/blob/91397f9f06f719ba185cc7b48aff4763d6529eea/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/ArduinoJson/Strings/Adapters/RamString.hpp"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/ArduinoJson/Strings/Adapters/RamString.hpp",
+          "name": "StringAdapter specializations",
+          "start_line": 69,
+          "end_line": 97,
+          "start_byte": 1412,
+          "end_byte": 2211,
+          "label_kind": "specializations",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/91397f9f06f719ba185cc7b48aff4763d6529eea/src/ArduinoJson/Strings/Adapters/RamString.hpp#L69-L97",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "extras/tests/Misc/CMakeLists.txt",
+          "revision": "91397f9f06f719ba185cc7b48aff4763d6529eea",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/91397f9f06f719ba185cc7b48aff4763d6529eea/extras/tests/Misc/CMakeLists.txt",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "extras/tests/Misc/StringAdapters.cpp",
+          "revision": "91397f9f06f719ba185cc7b48aff4763d6529eea",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/91397f9f06f719ba185cc7b48aff4763d6529eea/extras/tests/Misc/StringAdapters.cpp",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "extras/tests/CMakeLists.txt",
+          "revision": "91397f9f06f719ba185cc7b48aff4763d6529eea",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/91397f9f06f719ba185cc7b48aff4763d6529eea/extras/tests/CMakeLists.txt",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "extras/tests/Misc/CMakeLists.txt",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/bblanchon/ArduinoJson/blob/f0e84e4933b0d4120cd30ac1e0054ae67319f773/extras/tests/Misc/CMakeLists.txt",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "extras/tests/Misc/StringAdapters.cpp",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/bblanchon/ArduinoJson/blob/f0e84e4933b0d4120cd30ac1e0054ae67319f773/extras/tests/Misc/StringAdapters.cpp",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "extras/tests/Misc/issue2166.cpp",
+          "change": "added",
+          "available_at_base": false,
+          "fix_url": "https://github.com/bblanchon/ArduinoJson/blob/f0e84e4933b0d4120cd30ac1e0054ae67319f773/extras/tests/Misc/issue2166.cpp",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "New unsized-array specialization and issue2166.cpp do not exist at base. Labels cover the existing alternative adapter specializations, not invented pre-fix symbols. Requires compile-only regression/toolchain review, not a device claim.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/arduinojson-const-char-array"
+    },
+    {
+      "id": "arduinojson-nul-object-key",
+      "repository": "https://github.com/bblanchon/ArduinoJson",
+      "repository_full_name": "bblanchon/ArduinoJson",
+      "language": "C++ (Arduino-compatible)",
+      "title": "NUL-containing object keys",
+      "query": "Deserializing objects whose keys contain embedded NUL characters fails to preserve distinct complete key names, including when selecting object members with a filter.",
+      "query_provenance": "retrospective_official_commit_or_fix_test_symptom_paraphrase",
+      "problem_evidence": null,
+      "base_commit": "7946ebe1a3ad8e568148631f27cadd488fbf9198",
+      "base_url": "https://github.com/bblanchon/ArduinoJson/commit/7946ebe1a3ad8e568148631f27cadd488fbf9198",
+      "fix_commit": "811005872916f04562dfea7144be4a3241731557",
+      "fix_url": "https://github.com/bblanchon/ArduinoJson/commit/811005872916f04562dfea7144be4a3241731557",
+      "fix_committed_at": "2024-11-17T14:40:21Z",
+      "comparison_url": "https://github.com/bblanchon/ArduinoJson/compare/7946ebe1a3ad8e568148631f27cadd488fbf9198...811005872916f04562dfea7144be4a3241731557",
+      "base_relation": "fix has exactly one parent; base equals that parent",
+      "license": {
+        "spdx": "MIT",
+        "path": "LICENSE.txt",
+        "source_url": "https://github.com/bblanchon/ArduinoJson/blob/7946ebe1a3ad8e568148631f27cadd488fbf9198/LICENSE.txt",
+        "read_at_base": true
+      },
+      "required_files": [
+        "src/ArduinoJson/Json/JsonDeserializer.hpp"
+      ],
+      "required_source_spans": [
+        {
+          "path": "src/ArduinoJson/Json/JsonDeserializer.hpp",
+          "name": "JsonDeserializer::parseObject",
+          "start_line": 233,
+          "end_line": 315,
+          "start_byte": 5685,
+          "end_byte": 7693,
+          "label_kind": "symbol",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/7946ebe1a3ad8e568148631f27cadd488fbf9198/src/ArduinoJson/Json/JsonDeserializer.hpp#L233-L315",
+          "span_basis": "pre-fix raw source inspected; boundaries checked; not AST-certified",
+          "rationale": "Proposed causal implementation or prerequisite context identified from the official fix and pre-fix source; independent necessity review pending."
+        }
+      ],
+      "supporting_files": [
+        {
+          "path": "extras/tests/JsonDeserializer/filter.cpp",
+          "revision": "7946ebe1a3ad8e568148631f27cadd488fbf9198",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/7946ebe1a3ad8e568148631f27cadd488fbf9198/extras/tests/JsonDeserializer/filter.cpp",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "extras/tests/JsonDeserializer/object.cpp",
+          "revision": "7946ebe1a3ad8e568148631f27cadd488fbf9198",
+          "role": "existing_test_or_test_build_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/7946ebe1a3ad8e568148631f27cadd488fbf9198/extras/tests/JsonDeserializer/object.cpp",
+          "pre_fix_read_verified": true
+        },
+        {
+          "path": "extras/tests/CMakeLists.txt",
+          "revision": "7946ebe1a3ad8e568148631f27cadd488fbf9198",
+          "role": "build_or_dependency_context",
+          "source_url": "https://github.com/bblanchon/ArduinoJson/blob/7946ebe1a3ad8e568148631f27cadd488fbf9198/extras/tests/CMakeLists.txt",
+          "pre_fix_read_verified": true
+        }
+      ],
+      "withheld_fix_evidence": [
+        {
+          "path": "extras/tests/JsonDeserializer/filter.cpp",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/bblanchon/ArduinoJson/blob/811005872916f04562dfea7144be4a3241731557/extras/tests/JsonDeserializer/filter.cpp",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        },
+        {
+          "path": "extras/tests/JsonDeserializer/object.cpp",
+          "change": "modified",
+          "available_at_base": true,
+          "fix_url": "https://github.com/bblanchon/ArduinoJson/blob/811005872916f04562dfea7144be4a3241731557/extras/tests/JsonDeserializer/object.cpp",
+          "use": "evaluator-only fix/test evidence; never inject post-fix contents into retrieval inputs"
+        }
+      ],
+      "label_status": "provisional_static_source_checked",
+      "admitted_for_scoring": false,
+      "independent_label_review": false,
+      "bug_reproduced": false,
+      "fix_tested": false,
+      "uncertainty": "Retrospective commit-and-test-derived query. Existing object/filter tests are supporting context; unchanged JsonString, adaptString and object lookup implementations may also be required.",
+      "source_evidence": {
+        "changed_source_files_read": 1,
+        "old_diff_context_matched": true
+      },
+      "planned_checkout_root": "public-checkouts/arduinojson-nul-object-key"
+    }
+  ]
+}

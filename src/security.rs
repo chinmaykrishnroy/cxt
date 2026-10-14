@@ -12,6 +12,14 @@ pub enum SecretPolicy {
     Allow,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SecretScanner {
+    #[default]
+    Builtin,
+    Gitleaks,
+}
+
 #[derive(Debug, Clone)]
 pub struct SecretFinding {
     pub kind: &'static str,
@@ -57,6 +65,9 @@ fn patterns() -> &'static Vec<(&'static str, Regex)> {
                 )
                 .unwrap(),
             ),
+            ("structured-secret", Regex::new(r#"(?i)\b(?:api[_-]?key|client[_-]?secret|access[_-]?token|auth[_-]?token|secret|password|passwd|token)\b["']?\s*:\s*["']?[A-Za-z0-9_./+~=$!%&*-]{16,}["']?"#).unwrap()),
+            ("github-fine-grained", Regex::new(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b").unwrap()),
+            ("provider-token", Regex::new(r"\b(?:npm_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|[sr]k_live_[A-Za-z0-9]{20,})\b").unwrap()),
         ]
     })
 }
@@ -78,6 +89,130 @@ pub fn find_secrets(text: &str) -> Vec<SecretFinding> {
 
 pub fn redact_secrets(text: &str) -> (String, usize) {
     let findings = find_secrets(text);
+    redact_findings(text, &findings)
+}
+
+pub fn configured_findings(
+    text: &str,
+    scanner: SecretScanner,
+    allowlist: &[String],
+) -> Result<Vec<SecretFinding>, String> {
+    let rules: Vec<_> = allowlist
+        .iter()
+        .map(|r| Regex::new(r).map_err(|_| "invalid secret allowlist regex".to_string()))
+        .collect::<Result<_, _>>()?;
+    let mut findings = find_secrets(text);
+    if scanner == SecretScanner::Gitleaks {
+        findings.extend(gitleaks_findings(text)?);
+    }
+    findings.retain(|f| !rules.iter().any(|r| r.is_match(&text[f.start..f.end])));
+    findings.sort_by_key(|f| (f.start, f.end));
+    Ok(findings)
+}
+
+fn gitleaks_findings(text: &str) -> Result<Vec<SecretFinding>, String> {
+    use std::io::{Read, Write};
+    use std::process::{Command, Stdio};
+    let dir = tempfile::tempdir().map_err(|_| "cannot create private scanner report directory")?;
+    let report = dir.path().join("report.json");
+    let mut command = Command::new("gitleaks");
+    command
+        .args([
+            "stdin",
+            "--no-banner",
+            "--no-color",
+            "--redact=100",
+            "--exit-code",
+            "10",
+            "--timeout",
+            "10",
+            "--report-format",
+            "json",
+            "--report-path",
+        ])
+        .arg(&report)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    let mut child = command
+        .spawn()
+        .map_err(|_| "gitleaks is unavailable; install it or select --secret-scanner builtin")?;
+    let mut input = child.stdin.take().ok_or("scanner stdin unavailable")?;
+    let source = text.to_owned();
+    let writer = std::thread::spawn(move || input.write_all(source.as_bytes()));
+    let started = std::time::Instant::now();
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if started.elapsed() < std::time::Duration::from_secs(12) => {
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+            _ => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err("gitleaks process failed or timed out; export blocked".into());
+            }
+        }
+    };
+    if !writer.is_finished() {
+        // Closing/killing the child releases the pipe; do not wait on an unresponsive helper.
+        return Err("gitleaks did not consume its input; export blocked".into());
+    }
+    if !matches!(writer.join(), Ok(Ok(()))) {
+        return Err("gitleaks input failed; export blocked".into());
+    }
+    if !matches!(status.code(), Some(0 | 10)) {
+        return Err("gitleaks scan failed; export blocked".into());
+    }
+    let mut bytes = Vec::new();
+    if let Ok(file) = std::fs::File::open(&report) {
+        file.take(4 * 1024 * 1024 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|_| "scanner report read failed")?;
+    }
+    if bytes.is_empty() && status.success() {
+        return Ok(Vec::new());
+    }
+    if bytes.len() > 4 * 1024 * 1024 {
+        return Err("scanner report exceeded limit".into());
+    }
+    let report: Vec<serde_json::Value> =
+        serde_json::from_slice(&bytes).map_err(|_| "invalid scanner report; export blocked")?;
+    let mut offsets = vec![0usize];
+    for (i, b) in text.bytes().enumerate() {
+        if b == b'\n' {
+            offsets.push(i + 1);
+        }
+    }
+    let mut findings = Vec::new();
+    for finding in report {
+        let start = finding["StartLine"]
+            .as_u64()
+            .ok_or("missing scanner location")? as usize;
+        let end = finding["EndLine"]
+            .as_u64()
+            .ok_or("missing scanner location")? as usize;
+        if start == 0 || end < start || end > offsets.len() {
+            return Err("invalid scanner location; export blocked".into());
+        }
+        findings.push(SecretFinding {
+            kind: "gitleaks-line",
+            start: offsets[start - 1],
+            end: offsets.get(end).copied().unwrap_or(text.len()),
+        });
+    }
+    if status.code() == Some(10) && findings.is_empty() {
+        return Err("scanner reported findings without locations; export blocked".into());
+    }
+    Ok(findings)
+}
+
+pub fn redact_findings(text: &str, findings: &[SecretFinding]) -> (String, usize) {
     if findings.is_empty() {
         return (text.to_string(), 0);
     }

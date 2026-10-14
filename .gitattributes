@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.png binary
+*.exe binary
+# Preserve byte-level synthetic fixture endings, including deliberate final blank lines.
+eval/fixtures/** whitespace=-blank-at-eof

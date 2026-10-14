@@ -10,15 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub fn cxt_bin() -> PathBuf {
     std::env::var("CARGO_BIN_EXE_cxt")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            let mut path = PathBuf::from("target/debug");
-            if cfg!(windows) {
-                path.push("cxt.exe");
-            } else {
-                path.push("cxt");
-            }
-            path
-        })
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_BIN_EXE_cxt")))
 }
 
 /// Creates a fresh, unique temporary directory for a test case.

@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct Workspace {
+    pub graph_stats: crate::dependency_index::GraphStats,
     pub cwd: PathBuf,
     pub root: PathBuf,
     pub prepared: SelectionPreview,
@@ -35,6 +36,7 @@ impl Workspace {
             budget.read_file(&candidate.path)?;
             match engine::snapshot_file_with_options(candidate, &snapshot_options) {
                 Ok(file) => files.push(file),
+                Err(engine::EngineError::Secret(error)) => return Err(error),
                 Err(error) => {
                     prepared.skipped_files += 1;
                     prepared.skipped_details.push(SkippedItem {
@@ -58,7 +60,7 @@ impl Workspace {
         } else {
             Vec::new()
         };
-        let config = crate::config::Config::load(cwd);
+        let config = crate::config::Config::for_args(args, cwd);
         let includes = config
             .include
             .into_iter()
@@ -88,7 +90,12 @@ impl Workspace {
                 continue;
             }
             if args.secrets != Some(security::SecretPolicy::Allow) {
-                change.diff = security::redact_secrets(&change.diff).0;
+                let findings = security::configured_findings(
+                    &change.diff,
+                    args.secret_scanner,
+                    &args.secret_allow,
+                )?;
+                change.diff = security::redact_findings(&change.diff, &findings).0;
             }
         }
         let graph = crate::scan::graph(&root, args, cwd)?;
@@ -100,6 +107,7 @@ impl Workspace {
                 .map(|reason| SkippedItem { path: None, reason }),
         );
         Ok(Self {
+            graph_stats: graph.stats,
             cwd: cwd.canonicalize().unwrap_or_else(|_| cwd.to_path_buf()),
             head_commit: git::head_commit(&root),
             root,
@@ -118,12 +126,32 @@ impl Workspace {
         selected: &BTreeSet<PathBuf>,
         pinned: &BTreeSet<PathBuf>,
     ) -> Plan {
+        let missing_implementations: Vec<_> = self.files.iter().filter(|snapshot| {
+            pinned.contains(&snapshot.file.path)
+                && snapshot.file.representation == "map"
+                && args.context != crate::symbols::ContextLevel::Map
+        }).map(|snapshot| format!("Pinned implementation unavailable: {} — increase the budget and refresh, or choose complete context", self.relative(&snapshot.file.path))).collect();
+        if !missing_implementations.is_empty() {
+            return Plan {
+                result: Err(
+                    "pinned implementations cannot be replaced by adaptive signature maps".into(),
+                ),
+                checks: missing_implementations,
+                excluded: selected.iter().cloned().collect(),
+            };
+        }
         let mut snapshots: Vec<_> = self
             .files
             .iter()
             .filter(|s| selected.contains(&s.file.path))
             .cloned()
             .collect();
+        for snapshot in &mut snapshots {
+            if pinned.contains(&snapshot.file.path) {
+                snapshot.file.score = i64::MAX;
+                snapshot.map_fallback = None;
+            }
+        }
         snapshots.sort_by(|a, b| {
             pinned
                 .contains(&b.file.path)
