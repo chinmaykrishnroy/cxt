@@ -16,6 +16,11 @@ development binary and local results; it is not final cross-platform acceptance.
   supported syntax and negative cases. Triage the MCP findings in
   [the dogfooding log](docs/MCP_DOGFOODING.md); decide which are release blockers
   and document any deferred limitations. Keep candidate-wide secret fail-policy.
+  DEV progress: qualified Rust impl lookup, non-lexical impl bindings and scoped
+  imports have MCP regressions. Import-only support no longer inherits anchor
+  relevance. The original 8K probe now retains maps for all three requested files,
+  but the 2.5K probe still retains only one map; implementation coverage and
+  metadata-aware allocation remain open, not a solved retrieval claim.
 - [ ] **R2 — Investigate intermittent TUI worker timeout.** Retain the failed run,
   reproduce under controlled load, distinguish deadline sensitivity from a lost
   worker result, and record the disposition. A green rerun alone is not a fix;
@@ -23,6 +28,19 @@ development binary and local results; it is not final cross-platform acceptance.
   Include the prerelease's concurrent TUI scan/Gitleaks timeouts and the enclosing
   Git-root review-graph cost. Both isolated checks passed without deadline changes;
   their load-sensitive behavior still needs controlled measurement.
+  DEV progress: reproduced and fixed output-only settings rereading reviewed
+  sources, and a disconnected response channel leaving the TUI busy forever.
+  Both have App/worker regressions; neither is proven to explain the historical
+  deadline failure. The ten-second test deadline remains unchanged, with richer
+  revision/workspace/plan diagnostics. Keep R2 open until that failure is resolved
+  or explicitly accepted as a documented release limitation.
+  A later optimized integration replay also retained three scan-time-limit
+  refusals (`exact_budget_is_checked_on_actual_stdout_for_every_output_format`,
+  `go_local_replacements_trace_the_replacement_package`, and
+  `cargo_target_specific_local_dependencies_are_discovered_conservatively`).
+  No partial context was exported. Distinguish these production scan deadlines
+  from the ten-second TUI test helper deadline; serial replay results belong in
+  the DEV verification report, not in a claim that the failures are fixed.
 - [ ] **R3 — Finalize release identity.** Change Cargo.toml/Cargo.lock to 0.5.2,
   finalize CHANGELOG.md, add `docs/releases/v0.5.2.md`, and align help/docs with
   the actual supported scope. Identify the exact source and executable hashes.

@@ -98,3 +98,41 @@ repeated-query speedup from a new index.
 
 No implementation changes or comprehensive MCP performance experiment were made
 by these probes. Multi-request process timings are not per-tool latency metrics.
+
+## 2026-10-15: DEV regression fixes and replay
+
+The published prerelease is unchanged. The working DEV executable is frozen at
+`target/evaluation/cxt-dev-mcp-tui.exe`, SHA-256
+`736fc814ffb58523afab1c95e53f6bf8f5b060e5d59b465645d5637d22284cdf`.
+It still reports `0.5.2-dev.1`; the hash distinguishes it from that release.
+No cxt connector was exposed, so the replay used actual newline-delimited stdio
+MCP, not CLI output relabeled as MCP. Source-only requests and replies are
+summarized in the local `target/evaluation/dev-mcp-replay.jsonl`; source bodies
+are not copied into that log. The local replay script is
+`target/evaluation/dev_mcp_probe.py`.
+
+Both executables read the same current source checkout. The baseline is the
+checksum-verified published Windows binary, SHA-256
+`ba1306a1d9e0453556c2c28c6560a1b7a19e295c131b26596b91cbfcf1a7a6de`.
+Numbers below are server-reported cl100k packet counts, not client-visible
+protocol traffic or model billing.
+
+| Request | Published prerelease | DEV | Disposition |
+| --- | --- | --- | --- |
+| M1 search, 2,500 | One map, 2,269 tokens; 28 omissions | Unchanged | Open coverage/metadata limitation. |
+| M1 search, 8,000 | `query.rs`, `cli.rs`, `git.rs` maps; 6,293 tokens | `query.rs`, `query_graph.rs`, `index.rs`, `bindings.rs` maps; 5,267 tokens; 25 omissions | All three input seeds retained, but still no implementation coverage. |
+| M2 `IndexStore::load` | Symbol-not-found error | Focused implementation, 1,653 tokens | Fixed for tested Rust impl syntax; not full type/trait resolution. |
+| M2 `rank` | 654 tokens with unrelated nested test imports | 559 tokens without those imports | Fixed scoped-import regression; not general import-usage minimization. |
+
+Public MCP regressions went red before each fix, including a negative case
+preventing bare Rust calls from binding unrelated impl members, and a three-file
+Python case where import-only support displaced a genuine query match. Candidate-
+wide fail-policy, fixed MCP redaction, workspace/scan bounds and no persistent
+MCP cache writes are unchanged. The symbol metadata schema is invalidated.
+
+M1 remains partial and M3 remains open: no persistent lexical postings or bounded
+MCP session index was implemented in this slice. Process durations for four
+requests are retained but are not a latency distribution or evidence of a speedup.
+See [DEV verification](DEV_MCP_TUI_VERIFICATION.md) for local test gates and the
+separate, still-open historical TUI deadline issue. No held-out task contents,
+external model calls, downstream coding experiment or superiority claim is involved.

@@ -3,6 +3,116 @@ mod common;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
+fn call_tool(
+    root: &std::path::Path,
+    name: &str,
+    arguments: serde_json::Value,
+) -> serde_json::Value {
+    let mut server = cxt_core::mcp::Server::new(root).unwrap();
+    server.request(serde_json::json!({"jsonrpc":"2.0","id":0,"method":"initialize"}));
+    server.request(serde_json::json!({"jsonrpc":"2.0","method":"notifications/initialized"}));
+    server.request(serde_json::json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":name,"arguments":arguments}})).unwrap()["result"].clone()
+}
+
+#[test]
+fn qualified_rust_method_selects_its_impl_instead_of_same_named_methods() {
+    let dir = tempfile::tempdir().unwrap();
+    common::write_file(dir.path(), "store.rs", "struct Alpha;\nimpl Alpha { pub fn load(&self) -> &'static str { \"alpha implementation\" } }\nstruct Beta;\nimpl Beta { pub fn load(&self) -> &'static str { \"beta implementation\" } }\n");
+    let result = call_tool(
+        dir.path(),
+        "get_symbol",
+        serde_json::json!({"paths":["store.rs"],"symbol":"Alpha::load","max_tokens":2000}),
+    );
+    assert_eq!(result["isError"], false, "{result}");
+    let content = result["structuredContent"]["files"][0]["content"]
+        .as_str()
+        .unwrap();
+    assert!(content.contains("alpha implementation"), "{content}");
+    assert!(!content.contains("beta implementation"), "{content}");
+}
+
+#[test]
+fn qualified_rust_method_keeps_free_function_resolution_outside_impl_namespace() {
+    let dir = tempfile::tempdir().unwrap();
+    common::write_file(dir.path(), "store.rs", "fn helper() -> &'static str { \"free helper\" }\nstruct Alpha;\nimpl Alpha {\n    fn helper() -> &'static str { \"member helper\" }\n    fn load() -> &'static str { helper() }\n}\n");
+    let result = call_tool(
+        dir.path(),
+        "get_symbol",
+        serde_json::json!({"paths":["store.rs"],"symbol":"Alpha::load","max_tokens":2000}),
+    );
+    assert_eq!(result["isError"], false, "{result}");
+    let content = result["structuredContent"]["files"][0]["content"]
+        .as_str()
+        .unwrap();
+    assert!(content.contains("free helper"), "{content}");
+    assert!(!content.contains("member helper"), "{content}");
+}
+
+#[test]
+fn supporting_dependencies_do_not_displace_query_matches_in_search_budget() {
+    let dir = tempfile::tempdir().unwrap();
+    common::write_file(
+        dir.path(),
+        "entry.py",
+        "import noise\n\ndef cache_snapshot():\n    return noise.helper()\n",
+    );
+    common::write_file(
+        dir.path(),
+        "state.py",
+        "def snapshot():\n    return \"state evidence\"\n",
+    );
+    let mut noise = "def helper():\n    return 0\n".to_string();
+    for n in 0..10 {
+        noise.push_str(&format!("\ndef utility_{n}():\n    return {n}\n"));
+    }
+    common::write_file(dir.path(), "noise.py", &noise);
+    let result = call_tool(
+        dir.path(),
+        "search",
+        serde_json::json!({"paths":["entry.py","state.py"],"query":"cache snapshot","max_tokens":1200}),
+    );
+    assert_eq!(result["isError"], false, "{result}");
+    let packet = &result["structuredContent"];
+    let paths: Vec<_> = packet["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|f| f["path"].as_str())
+        .collect();
+    assert!(
+        paths.contains(&"entry.py") && paths.contains(&"state.py"),
+        "{packet}"
+    );
+    assert!(packet["metadata"]["estimated_tokens"].as_u64().unwrap() <= 1200);
+}
+
+#[test]
+fn focused_symbols_keep_ancestor_imports_without_unrelated_nested_imports() {
+    let dir = tempfile::tempdir().unwrap();
+    common::write_file(dir.path(), "scopes.rs", "use std::path::Path;\npub fn selected() { let _ = Path::new(\".\"); }\nmod tests {\n    use std::thread;\n    fn inner() { let _ = thread::current(); }\n}\n");
+    let outer = call_tool(
+        dir.path(),
+        "get_symbol",
+        serde_json::json!({"paths":["scopes.rs"],"symbol":"selected","max_tokens":2000}),
+    );
+    assert_eq!(outer["isError"], false, "{outer}");
+    let content = outer["structuredContent"]["files"][0]["content"]
+        .as_str()
+        .unwrap();
+    assert!(content.contains("use std::path::Path;"), "{content}");
+    assert!(!content.contains("use std::thread;"), "{content}");
+    let inner = call_tool(
+        dir.path(),
+        "get_symbol",
+        serde_json::json!({"paths":["scopes.rs"],"symbol":"inner","max_tokens":2000}),
+    );
+    assert_eq!(inner["isError"], false, "{inner}");
+    assert!(inner["structuredContent"]["files"][0]["content"]
+        .as_str()
+        .unwrap()
+        .contains("use std::thread;"));
+}
+
 #[test]
 fn read_only_mcp_rejects_policy_overrides_and_invalid_tool_arguments() {
     let dir = common::temp_dir("mcp-policy");

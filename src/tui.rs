@@ -502,7 +502,19 @@ impl App {
         }
     }
     fn poll(&mut self) -> Option<TuiSelection> {
-        while let Ok(response) = self.rx.try_recv() {
+        loop {
+            let response = match self.rx.try_recv() {
+                Ok(response) => response,
+                Err(mpsc::TryRecvError::Empty) => break,
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    self.busy = false;
+                    self.plan = None;
+                    self.workspace = None;
+                    self.pending_session = None;
+                    self.status = "Background worker stopped; quit and restart cxt".into();
+                    break;
+                }
+            };
             if response.revision != self.revision {
                 continue;
             }
@@ -934,7 +946,22 @@ impl App {
         self.args = args;
         self.pending_session = None;
         self.status = format!("Applying {}…", setting.name());
-        self.load();
+        if !self.busy
+            && self.workspace.is_some()
+            && matches!(
+                setting,
+                Setting::Format
+                    | Setting::PathStyle
+                    | Setting::Manifest
+                    | Setting::Compression
+                    | Setting::DryRun
+                    | Setting::Ci
+            )
+        {
+            self.replan();
+        } else {
+            self.load();
+        }
         Ok(())
     }
     fn apply_input(&mut self) {
@@ -1770,7 +1797,10 @@ mod tests {
         while app.busy {
             assert!(
                 start.elapsed() < Duration::from_secs(10),
-                "worker stalled: {}",
+                "worker stalled at revision {} (workspace={}, plan={}): {}",
+                app.revision,
+                app.workspace.is_some(),
+                app.plan.is_some(),
                 app.status
             );
             app.poll();
@@ -1906,6 +1936,21 @@ mod tests {
     }
 
     #[test]
+    fn disconnected_worker_reports_failure_instead_of_spinning_forever() {
+        let f = Fixture::new();
+        let mut app = f.app();
+        let (tx, rx) = mpsc::channel();
+        app.rx = rx;
+        drop(tx);
+        app.busy = true;
+        app.poll();
+        assert!(!app.busy);
+        assert!(app.plan.is_none());
+        assert!(app.workspace.is_none());
+        assert!(app.status.contains("Background worker stopped"));
+    }
+
+    #[test]
     fn input_cursor_and_choice_controls_support_unicode() {
         let mut input = Input {
             edit: Edit::Search,
@@ -1949,6 +1994,52 @@ mod tests {
         ready(&mut app);
         app.apply_input();
         assert!(f.0.join(".cxt-task.json").is_file());
+    }
+
+    #[test]
+    fn output_settings_preserve_reviewed_sources_and_still_block_stale_export() {
+        let f = Fixture::new();
+        let mut app = f.app();
+        app.apply_setting(Setting::Destination, "file").unwrap();
+        ready(&mut app);
+        app.pinned = app.selected.clone();
+        let selected = app.selected.clone();
+        fs::write(f.0.join("main.rs"), "fn changed_after_review() {}\n").unwrap();
+        for (setting, value) in [
+            (Setting::Format, "json"),
+            (Setting::PathStyle, "absolute"),
+            (Setting::Manifest, "true"),
+            (Setting::Compression, "gzip"),
+            (Setting::DryRun, "true"),
+            (Setting::Ci, "true"),
+        ] {
+            app.apply_setting(setting, value).unwrap();
+            ready(&mut app);
+            let result = app.plan.as_ref().unwrap().result.as_ref().unwrap();
+            assert_eq!(result.packed_files[0].content, "fn main() {}\n");
+            assert_eq!(app.selected, selected);
+            assert_eq!(app.pinned, selected);
+            assert_eq!(
+                app.workspace.as_ref().unwrap().stale_paths(&selected).len(),
+                1
+            );
+        }
+        let result = app.plan.as_ref().unwrap().result.as_ref().unwrap().clone();
+        assert_eq!(result.format, OutputFormat::Json);
+        assert!(serde_json::from_str::<serde_json::Value>(&result.rendered).is_ok());
+        app.submit(Work::Export(
+            app.workspace.clone().unwrap(),
+            app.args.clone(),
+            app.selected.clone(),
+            app.pinned.clone(),
+            result,
+        ));
+        ready(&mut app);
+        assert!(
+            app.status.contains("changed since preview"),
+            "{}",
+            app.status
+        );
     }
 
     #[test]

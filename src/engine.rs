@@ -890,7 +890,8 @@ fn expand_query_dependencies(
                 continue;
             }
             let mut candidate = Candidate::new(path, format!("dependency-of:{}", seed_label));
-            candidate.score = (seed.score - 5).max(1);
+            // An import supplies supporting context, not the anchor's query evidence.
+            candidate.score = 1;
             additions.push(candidate);
         }
     }
