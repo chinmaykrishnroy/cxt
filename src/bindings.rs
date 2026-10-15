@@ -82,14 +82,14 @@ impl<'a> ScopeIndex<'a> {
                 } else {
                     format!("{prefix}::{}", site.name)
                 };
-                let python_class = self
-                    .definitions
-                    .get(prefix)
-                    .is_some_and(|symbols| symbols.iter().any(|s| s.kind == "class_definition"));
+                let non_lexical = self.source.non_lexical_scopes.contains(prefix)
+                    || self.definitions.get(prefix).is_some_and(|symbols| {
+                        symbols.iter().any(|s| s.kind == "class_definition")
+                    });
                 if let Some(found) = self
                     .definitions
                     .get(qualified.as_str())
-                    .filter(|_| !python_class)
+                    .filter(|_| !non_lexical)
                 {
                     local.extend(
                         found

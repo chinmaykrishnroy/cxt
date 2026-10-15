@@ -179,6 +179,13 @@ Prefer a project path over broad-folder permission. `--dry-run` still performs s
 
 Additional controls: Tab / `1`–`7` changes views; `/` filters paths; `a` / `n` selects all/none matching the path filter; `e` edits query; `b` budget; `c` Git mode (`all` disables Git selection). `w` focuses preview, `v` wraps it, J/K scroll, `F` locates `file:line[:column]`. Original-source navigation requires complete, unminified, unredacted content. Mouse navigation and paste are supported. Minimum terminal is 52 × 15.
 
+On `DEV`, format, path style, manifest, compression, dry-run and CI settings
+re-render the ready, reviewed snapshots rather than refreshing source files.
+Press `r` to review source changes; export still rejects changed sources/HEAD.
+Selection/security/transformation settings, output-path changes and edits while
+a refresh is pending still reload. If the worker exits unexpectedly, the TUI
+clears its exportable plan and asks you to quit and restart.
+
 `S` / `L` saves/loads task options, selected/pinned paths and source fingerprints—not source contents. Save under `.cxt-task*.json`; an existing task is not overwritten. Restored files can be changed/unavailable; inspect Checks. Saving a task is not an encrypted storage mechanism and can retain query text, paths and security/broad-scan options.
 
 `E` exports the static agent SKILL.md to an editable filename; choose **Skill export agent** in Settings for the next project-local default. It creates a new file only, never source context or agent configuration. This action is independent of scan success; `g` still enforces all context-export gates.

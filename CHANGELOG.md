@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased (DEV)
+
+- Preserve Rust impl owners in method identities (for example `IndexStore::load`), without treating impl members as ordinary lexical functions. Full type/trait resolution remains unsupported.
+- Keep focused supporting imports in ancestor scopes rather than copying imports from unrelated nested modules/functions. Invalidate older symbol-cache metadata.
+- Give import-only query expansion a supporting score instead of inheriting its anchor's relevance; preserve independent lexical/graph evidence when merging candidates.
+- Re-render output-only TUI settings from reviewed snapshots without rescanning. Source-affecting settings and output-path changes still refresh; stale-source export checks remain mandatory.
+- Report a disconnected TUI worker instead of spinning indefinitely. The historical intermittent ten-second test timeout remains under investigation; no deadline increase is used as a fix.
+
 ## 0.5.2-dev.1 (2026-10-15, prerelease)
 
 - Publish an opt-in GitHub prerelease without replacing the stable latest release or updating package-manager channels. Use Debian prerelease ordering in `.deb` metadata.

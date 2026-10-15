@@ -13,6 +13,13 @@ cxt --git working --impact --context adaptive --model cl100k --budget 16000 --tu
 
 Complete preserves full selected source. Map summarizes definitions and does not contain their bodies. Focused copies original AST units and imports, with bounded lexical-reference expansion. Adaptive can substitute maps when implementations do not fit; representation and reasons identify that omission. Maps must never be mistaken for implementation coverage. Unsupported/invalid syntax and unmatched task text use a complete fallback.
 
+On `DEV`, imports in recognized AST scope containers are limited to scopes enclosing a selected symbol;
+imports inside the copied symbol are already part of its original body. This is
+conservative scope filtering, not proof that every retained import is used.
+Rust impl methods have owner-qualified identities such as `IndexStore::load`;
+impl namespaces are not bare-name lexical scopes. This does not add compiler,
+trait dispatch, overload or complete nested-module resolution.
+
 Focused selection is a deterministic greedy heuristic, not a globally optimal knapsack or compiler-resolved program slice. Query packets softly allocate each file a third of the available span budget minus 256 tokens of file-envelope headroom, retrying the full span budget when no implementation fits. This avoids one file filling the whole packet without truncating a large indivisible implementation. Up to three focused implementation files precede score-per-token supporting context: exact query-word matches of at least three characters in project-relative directory components take priority, then file scores. This helps an explicitly named module survive generic API chatter; checkout ancestors do not count. Explicit pins still come first. Imports and final metadata remain subject to the final rendered-packet budget, so this is not a guarantee that all anchors fit. Named-symbol selection does not use the soft allocation.
 
 Imports, dynamic dispatch, macros, overloads and implicit framework behavior may be unresolved. Related tests are suggestions, not measured coverage. Pin essential files in the TUI; a pin that cannot fit blocks export rather than silently becoming a signature map. If adaptive preparation already produced a map, increase the budget and refresh, or choose complete context. Explicit map mode can pin maps because orientation was deliberately requested.
@@ -26,6 +33,12 @@ Relationship expansion takes at most three matching symbols from each of eight t
 Development reasons expose `query-reference`, path cost, every traversed edge's direction (`CALLS`/`CALLED_BY` or `REFERENCES`/`REFERENCED_BY`), binding method and original reference file/line. A mixed path retains its heuristic labels; no path is called compiler-verified. `query-unresolved` reports imported references without exactly one eligible definition target (up to four per visited symbol/eight per file), and `query-graph-limit` reports suppressed hubs. These are bounded diagnostics, not an exhaustive inventory of missing runtime relationships. Reasons are visible in dry-run, TUI file details and manifest exports. Static import expansion remains separate, from up to eight ranked files. `--ranker lexical|symbols|legacy` and `--no-query-expansion` support controlled experiments. The latter disables query-driven graph/import expansion; focused representation can still retain local helpers referenced by the selected implementation. Weights are experimental, not trained or claimed optimal; terminology mismatch remains a limitation. See the [staged architecture](QUERY_ARCHITECTURE.md) for capabilities that remain planned.
 
 JSON `cxt.context.v1` adds `representation`, `spans` and `source_sha256` to each file. Spans are half-open UTF-8 byte offsets and one-based original line locations. `source_sha256` fingerprints the original source; `sha256` under `--manifest` fingerprints exported transformed content. Complete representations have no sliced-span list. A map's locations identify definitions, **not copied implementation spans**. Redaction/minification can change exported offsets; source locations refer to the original snapshot.
+
+`DEV` assigns import-only supporting candidates score 1, not the query anchor's
+score minus a small constant. Independent lexical/symbol/graph scores survive
+candidate merging. An import is supporting evidence, not evidence of equal task
+relevance. This remains a heuristic; it does not guarantee coverage under packet
+metadata pressure or turn explicit input paths into pins.
 
 JSON metadata records budget exclusions, skipped-input counts and up to 64 final-plan omissions (with a total omitted count). These describe candidates already selected; files rejected by initial ranking/filtering are not an exhaustive audit of the entire repository. Markdown/XML include omission details with `--manifest`. Omission metadata consumes budget too. Secret policy also scans task query metadata; source replacement totals do not include query replacements.
 

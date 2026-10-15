@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-const SCHEMA: &str = "cxt.symbols.v13-binding-scopes-tree-sitter-0.20";
+const SCHEMA: &str = "cxt.symbols.v16-scoped-imports-tree-sitter-0.20";
 const MAX_CACHE_BYTES: u64 = 8 * 1024 * 1024;
 
 pub struct IndexStore {
@@ -79,6 +79,7 @@ impl IndexStore {
                             .chain(entry.index.symbols.iter().map(|s| &s.binding_scope))
                             .chain(entry.index.local_bindings.iter().map(|b| &b.scope))
                             .chain(entry.index.imports.iter())
+                            .chain(entry.index.import_scopes.values())
                             .chain(entry.index.bindings.iter().map(|binding| &binding.scope))
                             .chain(
                                 entry
@@ -90,6 +91,16 @@ impl IndexStore {
                             .all(|s| {
                                 s.start_byte <= s.end_byte
                                     && source.get(s.start_byte..s.end_byte).is_some()
+                            })
+                            && entry.index.imports.iter().all(|import| {
+                                entry
+                                    .index
+                                    .import_scopes
+                                    .get(&import.start_byte)
+                                    .is_some_and(|scope| {
+                                        scope.start_byte <= import.start_byte
+                                            && scope.end_byte >= import.end_byte
+                                    })
                             });
                         if entry.schema == SCHEMA && entry.hash == hash && valid {
                             return IndexedSource {

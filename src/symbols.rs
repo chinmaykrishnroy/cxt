@@ -40,11 +40,13 @@ pub struct Symbol {
 pub struct SourceIndex {
     pub symbols: Vec<Symbol>,
     pub imports: Vec<SourceSpan>,
+    pub import_scopes: BTreeMap<usize, SourceSpan>,
     pub identifiers: BTreeSet<String>,
     pub parsed: bool,
     pub bindings: Vec<ImportBinding>,
     pub exports: BTreeMap<String, String>,
     pub local_bindings: Vec<LocalBinding>,
+    pub non_lexical_scopes: BTreeSet<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -225,6 +227,29 @@ fn binding_scope(node: Node) -> SourceSpan {
         owner = parent.parent();
     }
     span(root)
+}
+
+fn import_scope(mut node: Node) -> SourceSpan {
+    while let Some(parent) = node.parent() {
+        node = parent;
+        if matches!(
+            node.kind(),
+            "function_item"
+                | "function_definition"
+                | "function_declaration"
+                | "method_definition"
+                | "method_declaration"
+                | "mod_item"
+                | "class_definition"
+                | "class_declaration"
+                | "namespace_definition"
+                | "block"
+                | "statement_block"
+        ) {
+            break;
+        }
+    }
+    span(node)
 }
 
 fn identifier(node: Node, source: &str) -> Option<String> {
@@ -504,6 +529,9 @@ fn visit(node: Node, source: &str, parents: &[String], index: &mut SourceIndex) 
             javascript_bindings(node, source, index);
         }
         index.imports.push(span(node));
+        index
+            .import_scopes
+            .insert(node.start_byte(), import_scope(node));
         return;
     }
     let definition = matches!(
@@ -533,6 +561,20 @@ fn visit(node: Node, source: &str, parents: &[String], index: &mut SourceIndex) 
             .parent()
             .is_some_and(|parent| parent.kind() == "field_declaration_list"));
     let mut scope = parents.to_vec();
+    if kind == "impl_item" {
+        if let Some(mut owner) = node.child_by_field_name("type") {
+            while owner.kind() == "generic_type" {
+                let Some(base) = owner.child_by_field_name("type") else {
+                    break;
+                };
+                owner = base;
+            }
+            scope.push(source[owner.byte_range()].to_string());
+            index
+                .non_lexical_scopes
+                .insert(crate::security::redact_secrets(&scope.join("::")).0);
+        }
+    }
     if definition {
         let name = node
             .child_by_field_name("name")
@@ -868,7 +910,22 @@ pub(crate) fn represent_with_hints(
             }
         }
     }
-    let mut ranges = index.imports.clone();
+    let mut ranges: Vec<_> = index
+        .imports
+        .iter()
+        .filter(|import| {
+            index
+                .import_scopes
+                .get(&import.start_byte)
+                .is_none_or(|scope| {
+                    chosen.iter().any(|symbol| {
+                        scope.start_byte <= symbol.span.start_byte
+                            && scope.end_byte >= symbol.span.end_byte
+                    })
+                })
+        })
+        .cloned()
+        .collect();
     ranges.extend(chosen.iter().map(|s| s.span.clone()));
     ranges.sort_by_key(|s| s.start_byte);
     let mut merged: Vec<SourceSpan> = Vec::new();
