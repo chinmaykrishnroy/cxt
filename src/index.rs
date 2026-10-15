@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-const SCHEMA: &str = "cxt.symbols.v6-field-separators-tree-sitter-0.20";
+const SCHEMA: &str = "cxt.symbols.v13-binding-scopes-tree-sitter-0.20";
 const MAX_CACHE_BYTES: u64 = 8 * 1024 * 1024;
 
 pub struct IndexStore {
@@ -76,7 +76,17 @@ impl IndexStore {
                             .symbols
                             .iter()
                             .map(|s| &s.span)
+                            .chain(entry.index.symbols.iter().map(|s| &s.binding_scope))
+                            .chain(entry.index.local_bindings.iter().map(|b| &b.scope))
                             .chain(entry.index.imports.iter())
+                            .chain(entry.index.bindings.iter().map(|binding| &binding.scope))
+                            .chain(
+                                entry
+                                    .index
+                                    .symbols
+                                    .iter()
+                                    .flat_map(|s| s.reference_sites.iter().map(|r| &r.span)),
+                            )
                             .all(|s| {
                                 s.start_byte <= s.end_byte
                                     && source.get(s.start_byte..s.end_byte).is_some()

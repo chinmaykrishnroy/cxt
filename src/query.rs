@@ -27,6 +27,13 @@ pub fn rank(candidates: Vec<Candidate>, query: &str, root: &Path) -> Vec<Candida
     rank_checked(candidates, query, root, || Ok(())).unwrap_or_default()
 }
 
+pub(crate) struct RankingOptions<'a> {
+    pub store: &'a crate::index::IndexStore,
+    pub ranker: Ranker,
+    pub expand: bool,
+    pub scope: Option<&'a Path>,
+}
+
 pub(crate) fn rank_checked<F>(
     candidates: Vec<Candidate>,
     query: &str,
@@ -40,9 +47,12 @@ where
         candidates,
         query,
         root,
-        &crate::index::IndexStore::new(None),
-        Ranker::Hybrid,
-        true,
+        RankingOptions {
+            store: &crate::index::IndexStore::new(None),
+            ranker: Ranker::Hybrid,
+            expand: true,
+            scope: None,
+        },
         check,
     )
 }
@@ -51,14 +61,18 @@ pub(crate) fn rank_with_store_checked<F>(
     mut candidates: Vec<Candidate>,
     query: &str,
     root: &Path,
-    store: &crate::index::IndexStore,
-    ranker: Ranker,
-    expand: bool,
+    options: RankingOptions<'_>,
     mut check: F,
 ) -> Result<Vec<Candidate>, String>
 where
     F: FnMut() -> Result<(), String>,
 {
+    let RankingOptions {
+        store,
+        ranker,
+        expand,
+        scope,
+    } = options;
     check()?;
     let terms = query_terms(query);
     if terms.is_empty() {
@@ -180,7 +194,7 @@ where
     }
 
     if expand && ranker == Ranker::Hybrid {
-        crate::query_graph::expand(&mut candidates, &indices, &terms, &mut check)?;
+        crate::query_graph::expand(&mut candidates, &indices, &terms, root, scope, &mut check)?;
     }
 
     candidates.retain(|c| c.score > 0);

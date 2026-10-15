@@ -1,0 +1,32 @@
+{
+  "schema": "cxt.eval.v1",
+  "dataset_kind": "synthetic development regressions for import bindings; not held-out tasks or AI coding success",
+  "budgets": [2000, 4000],
+  "contexts": ["focused", "adaptive"],
+  "rankers": ["hybrid"],
+  "query_expansion": [true, false],
+  "tasks": [
+    {
+      "id": "python-qualified-import-bindings",
+      "root": "fixtures/bindings-python",
+      "query": "volume changes affect rooms",
+      "required_files": ["audio.py", "state.py", "events.py"],
+      "required_symbols": [
+        {"path": "audio.py", "name": "change_volume", "start_line": 3, "end_line": 4},
+        {"path": "state.py", "name": "commit", "start_line": 1, "end_line": 2},
+        {"path": "events.py", "name": "dispatch", "start_line": 3, "end_line": 4}
+      ]
+    },
+    {
+      "id": "typescript-aliased-import-bindings",
+      "root": "fixtures/bindings-typescript",
+      "query": "volume changes affect rooms",
+      "required_files": ["audio.ts", "state.ts", "events.ts"],
+      "required_symbols": [
+        {"path": "audio.ts", "name": "changeVolume", "start_line": 3, "end_line": 5},
+        {"path": "state.ts", "name": "commit", "start_line": 1, "end_line": 3},
+        {"path": "events.ts", "name": "dispatch", "start_line": 3, "end_line": 5}
+      ]
+    }
+  ]
+}

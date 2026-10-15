@@ -6,6 +6,8 @@ For CLI/configuration semantics, defaults, output behavior or TUI changes, consu
 
 Portable agent instructions live in `skills/cxt/SKILL.md`; registration/export conventions are in [docs/AGENT_SKILL.md](docs/AGENT_SKILL.md). `skill` is the shared non-overwriting writer for CLI/TUI. Skill export never scans source, edits client configuration or runs through MCP. Keep the guide's option coverage test passing and preserve its instruction-only, permission-neutral behavior.
 
+During repository development, use cxt MCP first for task-scoped code discovery and focused context; follow [docs/MCP_DOGFOODING.md](docs/MCP_DOGFOODING.md) for tool choice, stdio fallback, omission checks and measured improvement logging. Verify original source before edits and use narrow filesystem fallbacks when necessary. For release readiness or retrieval work, consult [TODO.md](TODO.md); keep independently curated holdout details outside implementation-agent access until the implementation/configuration freeze.
+
 ## Validate
 
 ```bash
@@ -54,5 +56,5 @@ Use public CLI exports and core transformation/rendering APIs as regression boun
 
 Inspect Git changes and preserve unrelated work. Before a release, update Cargo.toml/Cargo.lock, CHANGELOG.md and relevant help/docs; run every validation command above plus applicable runtime smokes. Record local-platform verification separately from GitHub cross-platform build results.
 
-Commit/push/tag only when authorized. Use an unused annotated `vMAJOR.MINOR.PATCH` tag on the verified commit; tag pushes trigger `.github/workflows/release.yml`. Verify remote branch/tag identities and that the release workflow starts. Do not move existing public tags or claim download assets exist until the workflow publishes them. Maintainer manual packaging/publication instructions are in [packaging/README.md](packaging/README.md).
+Commit/push/tag only when authorized. Use an unused annotated `vMAJOR.MINOR.PATCH` tag on the verified commit, or `vMAJOR.MINOR.PATCH-dev.N` for an explicitly authorized prerelease; tag pushes trigger `.github/workflows/release.yml`. Prereleases must remain non-latest and outside stable package-manager updates. Verify remote branch/tag identities and that the release workflow starts. Do not move existing public tags or claim download assets exist until the workflow publishes them. Maintainer manual packaging/publication instructions are in [packaging/README.md](packaging/README.md).
 

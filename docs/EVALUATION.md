@@ -11,6 +11,7 @@ cargo build --release
 target/release/cxt --evaluate eval/corpus.json --output target/retrieval-report.json
 target/release/cxt --evaluate eval/ablation.json --output target/ablation-report.json
 target/release/cxt --evaluate eval/relationships.json --output target/relationships-report.json
+target/release/cxt --evaluate eval/bindings.json --output target/bindings-report.json
 target/release/cxt --evaluate eval/corpus.json --eval-baseline /trusted/path/to/cxt-0.4.2 --output target/comparison.json
 ```
 
@@ -25,6 +26,8 @@ Report schema `cxt.eval.report.v1` retains every cold/repeat attempt, query/argu
 Since 0.5.1, reports classify failed children with `failure_kind`, `exit_code`, elapsed time and peak memory when available. Categories distinguish secret fail-policy, security scanner errors, scan timeout/limits, no query match, token budget, invocation timeout and otherwise unclassified CLI/invocation errors. Classification uses bounded in-memory stderr; raw stderr is drained but never stored in the report. Categories are diagnostic hints, not a replacement for inspecting a failing invocation locally. Original-source candidate-wide fail-policy is unchanged, including findings outside focused slices and in candidates later omitted by budgeting. Older reports lack these fields and cannot be retrospectively diagnosed from exit code alone.
 
 `eval/relationships.json` is a separate Python/TypeScript synthetic shared-state regression. It labels the query entry, state helper and a second handler without query terms. It controls expansion on/off at 2K/4K final packet budgets in focused/adaptive modes. These deliberately small cases measure a known failure, not independent real-task generalization.
+
+`eval/bindings.json` adds development-influencing Python module-alias and TypeScript named-alias cases with duplicate names and shadowed-callback distractors at the same 2K/4K budgets. For a like-for-like 0.5.1 comparison, run that frozen executable's own `--evaluate` on the same corpus into a separate report and compare identical context/ranker/expansion/budget/phase records. The runner's `--eval-baseline` track deliberately uses legacy complete-mode arguments for older tools; it is not an equivalent-mode comparison with a modern cxt release. Required-span recall measures the labeled implementations; negative relationship assertions live in `tests/query_resolution.rs`. This corpus is synthetic regression evidence, not unseen public-task accuracy, independently reviewed labels, aggregate relationship precision or downstream coding success.
 
 Repeat uses the current tool's metadata cache but still launches a new process and rereads sources; tokenizer startup is included. Baseline may rescan. This does not demonstrate incremental-query latency. Linux memory is sampled VmHWM; Windows uses process peak working set; unsupported platforms report null. Do not compare those methods as interchangeable measurements.
 

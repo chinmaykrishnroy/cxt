@@ -357,9 +357,12 @@ pub fn prepare(args: &Args, cwd: &Path) -> Result<SelectionPreview, EngineError>
             selection.candidates,
             q,
             &selection.root,
-            &crate::index::IndexStore::for_args(args, cwd),
-            args.ranker,
-            !args.no_query_expansion,
+            query::RankingOptions {
+                store: &crate::index::IndexStore::for_args(args, cwd),
+                ranker: args.ranker,
+                expand: !args.no_query_expansion,
+                scope: scope.as_deref(),
+            },
             || scan_budget.check_time(),
         )
         .map_err(EngineError::General)?;

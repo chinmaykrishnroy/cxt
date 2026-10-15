@@ -1,6 +1,12 @@
 # cxt roadmap
 
-`cxt 0.5.0` adds experimental task-aware retrieval over the reusable review engine. The long-term identity remains: **do not dump a repository into an LLM; determine a reviewable useful slice for the task.**
+Task-aware retrieval builds on the reusable review engine. The long-term identity remains: **do not dump a repository into an LLM; determine a reviewable useful slice for the task.**
+
+The current development preview is `0.5.2-dev.1`. See [TODO.md](TODO.md) for the
+stable-release gates and prioritized DeepQuery gaps, and
+[docs/QUERY_ARCHITECTURE.md](docs/QUERY_ARCHITECTURE.md) for implemented versus
+planned contracts. Historical milestone headings below are not a promise that
+every listed capability or evidence gate is complete.
 
 ## Implemented in 0.5.0
 

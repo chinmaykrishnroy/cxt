@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.2-dev.1 (2026-10-15, prerelease)
+
+- Publish an opt-in GitHub prerelease without replacing the stable latest release or updating package-manager channels. Use Debian prerelease ordering in `.deb` metadata.
+
+- Begin the evidence-guided, model-free query architecture; preserve the shared CLI/TUI/MCP packing and security pipeline.
+- Extract original reference sites and binding scopes; support Python from-import aliases and simple module aliases, plus JavaScript/TypeScript named/default/namespace imports with direct declaration exports.
+- Share lexical binding decisions between query traversal and focused helper retention. Respect parameter shadowing, Python function-local rebinding/class namespaces and JavaScript/TypeScript declaration scopes; avoid guessing unknown object receivers or unrelated nested/class definitions.
+- Prefer import/local-bound links over unique-name heuristics through bounded weighted best-first traversal. Expose call/reference direction, binding method and original call-site locations in selection reasons.
+- Explain unresolved imported definition targets without falling back to unrelated global names; disclose suppressed hub traversal. Compiler/type resolution, richer effect graphs and general terminology understanding remain future work.
+- Invalidate older parser caches and add public CLI/core regressions plus a synthetic import-binding corpus. These development examples are not held-out accuracy or downstream coding-success evidence.
+- Document the staged query architecture, evidence categories, safety invariants and evaluation gates without claiming competitive superiority.
+
 ## 0.5.1 (2026-10-15)
 
 - Prioritize up to three strong focused implementations before filling query budgets with cheap supporting files; prefer explicitly named project-relative modules over generic API chatter, while keeping explicit pins first.
