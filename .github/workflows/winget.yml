@@ -1,0 +1,81 @@
+name: WinGet update
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published stable release tag (vMAJOR.MINOR.PATCH)
+        required: true
+        type: string
+      submit:
+        description: Submit a PR (false only validates; existing versions/PRs are skipped)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: winget-submission
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: >-
+      github.repository == 'chinmaykrishnroy/cxt' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        startsWith(github.event.workflow_run.head_branch, 'v')))
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      # Never run scripts or artifacts from the triggering workflow's checkout.
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Prepare verified manifests
+        id: prepare
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.event.workflow_run.head_branch }}
+        run: |
+          python -m unittest discover -s packaging/winget -p 'test_*.py'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($env:RELEASE_TAG -notmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
+            if ('${{ github.event_name }}' -eq 'workflow_dispatch') { throw 'Use a stable vMAJOR.MINOR.PATCH tag.' }
+            Write-Output 'Skipping non-stable tag.'
+            exit 0
+          }
+          python packaging/winget/prepare.py --tag $env:RELEASE_TAG --out target/winget
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Validate manifests
+        if: steps.prepare.outputs.ready == 'true'
+        shell: pwsh
+        run: |
+          winget validate --manifest target/winget/manifests --disable-interactivity
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v6
+        if: steps.prepare.outputs.ready == 'true'
+        with:
+          name: winget-manifests
+          path: target/winget/manifests
+          if-no-files-found: error
+      - name: Submit update PR
+        if: steps.prepare.outputs.ready == 'true' && (github.event_name == 'workflow_run' || inputs.submit)
+        shell: pwsh
+        env:
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+        run: |
+          if (-not $env:WINGET_CREATE_GITHUB_TOKEN) { throw 'Missing WINGET_CREATE_GITHUB_TOKEN repository secret.' }
+          winget install --id Microsoft.WingetCreate --exact --source winget --accept-source-agreements --accept-package-agreements --disable-interactivity
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $tool = "$env:LOCALAPPDATA/Microsoft/WindowsApps/wingetcreate.exe"
+          & $tool submit target/winget/manifests --no-open
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
