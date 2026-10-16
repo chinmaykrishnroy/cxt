@@ -40,11 +40,12 @@ fn evaluation_distinguishes_empty_queries_from_packet_budget_failures() {
         "repo/audio.py",
         "def change_volume():\n    return 42\n",
     );
-    for (query, budget, expected) in [
-        ("nonexistentzzzz", 4000, "no_query_match"),
-        ("volume", 1, "token_budget"),
+    for (query, budget, context, expected) in [
+        ("nonexistentzzzz", 4000, "focused", "no_query_match"),
+        ("volume", 1, "focused", "token_budget"),
+        ("volume", 100, "complete", "token_budget"),
     ] {
-        let corpus = serde_json::json!({"schema":"cxt.eval.v1","dataset_kind":"synthetic failure categories","budgets":[budget],"contexts":["focused"],"tasks":[{"id":"failure","root":"repo","query":query,"required_files":["audio.py"],"required_symbols":[]}]});
+        let corpus = serde_json::json!({"schema":"cxt.eval.v1","dataset_kind":"synthetic failure categories","budgets":[budget],"contexts":[context],"tasks":[{"id":"failure","root":"repo","query":query,"required_files":["audio.py"],"required_symbols":[]}]});
         write_file(dir.path(), "corpus.json", &corpus.to_string());
         let out = run_cxt(dir.path(), &["--evaluate", "corpus.json"]);
         assert_success(&out);

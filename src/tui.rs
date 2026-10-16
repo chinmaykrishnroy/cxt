@@ -1793,19 +1793,65 @@ mod tests {
         }
     }
     fn ready(app: &mut App) {
+        ready_with_timeout(app, Duration::from_secs(10));
+    }
+
+    fn ready_with_timeout(app: &mut App, timeout: Duration) {
         let start = Instant::now();
         while app.busy {
+            app.poll();
+            if !app.busy {
+                break;
+            }
             assert!(
-                start.elapsed() < Duration::from_secs(10),
+                start.elapsed() < timeout,
                 "worker stalled at revision {} (workspace={}, plan={}): {}",
                 app.revision,
                 app.workspace.is_some(),
                 app.plan.is_some(),
                 app.status
             );
-            app.poll();
             thread::sleep(Duration::from_millis(10));
         }
+    }
+
+    #[test]
+    fn ready_wait_accepts_completed_current_revision_at_deadline() {
+        let f = Fixture::new();
+        let mut app = f.app();
+        let (tx, rx) = mpsc::channel();
+        app.rx = rx;
+        tx.send(Response {
+            revision: app.revision,
+            workspace: None,
+            plan: app.plan.take(),
+            export: None,
+            error: None,
+        })
+        .unwrap();
+        app.busy = true;
+        ready_with_timeout(&mut app, Duration::ZERO);
+        assert!(!app.busy);
+        assert!(app.plan.is_some());
+    }
+
+    #[test]
+    #[should_panic(expected = "worker stalled")]
+    fn ready_wait_still_times_out_when_only_obsolete_response_is_queued() {
+        let f = Fixture::new();
+        let mut app = f.app();
+        let (tx, rx) = mpsc::channel();
+        app.rx = rx;
+        tx.send(Response {
+            revision: app.revision.saturating_sub(1),
+            workspace: None,
+            plan: app.plan.take(),
+            export: None,
+            error: None,
+        })
+        .unwrap();
+        app.busy = true;
+        ready_with_timeout(&mut app, Duration::ZERO);
     }
 
     #[test]

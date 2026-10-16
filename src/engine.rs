@@ -726,10 +726,20 @@ pub fn run_snapshots(
         packed.push(file);
     }
 
+    let token_budget_message = || {
+        let (option, recovery) = if args.mcp {
+            ("max_tokens", "Increase max_tokens (maximum 32000), or narrow paths/query; use get_symbol or focused get_context for a specific implementation")
+        } else {
+            ("--budget", "Increase --budget or narrow the selection")
+        };
+        format!(
+            "token budget {option}={} is too small for the selected context, including rendered metadata/output overhead. {recovery}. No context was exported.",
+            max_tokens.unwrap_or_default()
+        )
+    };
     if packed.is_empty() && !selected_files.is_empty() {
         let mut message = if budget_skipped > 0 {
-            "no selected file fits the token budget; increase --budget or narrow the selection"
-                .to_string()
+            token_budget_message()
         } else {
             "no selected file fit the active safety/token limits".to_string()
         };
@@ -761,6 +771,12 @@ pub fn run_snapshots(
             Some(security::redact_findings(query, &findings).0)
         }
         _ => args.query.clone(),
+    };
+    let mut rendered_token_exclusion = false;
+    let output_limit_message = || {
+        format!(
+        "Rendered metadata/output overhead exceeds the {max_output_bytes}-byte output limit. Narrow the selection. No context was exported."
+    )
     };
     let (rendered, estimated_tokens) = loop {
         let included: std::collections::BTreeSet<_> = packed.iter().map(|f| &f.path).collect();
@@ -815,13 +831,16 @@ pub fn run_snapshots(
         }
 
         let Some(removed) = packed.pop() else {
-            return Err(EngineError::General(
-                "metadata/output overhead exceeds the configured limit".to_string(),
-            ));
+            return Err(EngineError::General(if !within_tokens {
+                token_budget_message()
+            } else {
+                output_limit_message()
+            }));
         };
         content_tokens = content_tokens.saturating_sub(removed.tokens);
         estimate_seed = content_tokens;
         if !within_tokens {
+            rendered_token_exclusion = true;
             budget_skipped += 1;
         } else {
             skipped_files += 1;
@@ -829,9 +848,11 @@ pub fn run_snapshots(
     };
 
     if packed.is_empty() && !selected_files.is_empty() {
-        return Err(EngineError::General(
-            "no selected file fit after including rendered metadata overhead".to_string(),
-        ));
+        return Err(EngineError::General(if rendered_token_exclusion {
+            token_budget_message()
+        } else {
+            output_limit_message()
+        }));
     }
 
     let redactions = packed.iter().map(|f| f.redactions).sum();

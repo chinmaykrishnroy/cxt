@@ -1,6 +1,6 @@
 # cxt delivery TODO
 
-Status checked against the local **0.5.2-dev.1** working tree on 2026-10-15.
+Status checked against the local **0.5.2 unpublished candidate** on 2026-10-16.
 This is the actionable backlog; [ROADMAP.md](ROADMAP.md) provides historical
 milestones and [the query architecture](docs/QUERY_ARCHITECTURE.md) defines the
 target contracts. Unchecked items are not implemented or verified capabilities.
@@ -21,6 +21,10 @@ development binary and local results; it is not final cross-platform acceptance.
   relevance. The original 8K probe now retains maps for all three requested files,
   but the 2.5K probe still retains only one map; implementation coverage and
   metadata-aware allocation remain open, not a solved retrieval claim.
+  Candidate scope: MCP `search` is intentionally map-oriented, so missing bodies
+  in search alone are not an implementation-export failure. Low-budget multi-file
+  coverage stays a disclosed heuristic limitation. Persistent lexical/session
+  indexes and full behavior-oriented retrieval are deferred, not silently claimed.
 - [ ] **R2 — Investigate intermittent TUI worker timeout.** Retain the failed run,
   reproduce under controlled load, distinguish deadline sensitivity from a lost
   worker result, and record the disposition. A green rerun alone is not a fix;
@@ -41,17 +45,39 @@ development binary and local results; it is not final cross-platform acceptance.
   No partial context was exported. Distinguish these production scan deadlines
   from the ten-second TUI test helper deadline; serial replay results belong in
   the DEV verification report, not in a claim that the failures are fixed.
+  2026-10-16: a zero-wait regression reproduced a completed current-revision plan
+  being reported stalled because the helper checked elapsed time before polling.
+  Poll ordering is corrected without widening the deadline; an obsolete-response
+  counterpart guards against accepting unfinished work. This is not proof of the
+  original failure's cause, so R2 remains open pending repeat measurements and
+  explicit disposition of load-sensitive scan refusals.
 - [ ] **R3 — Finalize release identity.** Change Cargo.toml/Cargo.lock to 0.5.2,
   finalize CHANGELOG.md, add `docs/releases/v0.5.2.md`, and align help/docs with
   the actual supported scope. Identify the exact source and executable hashes.
-- [ ] **R4 — Revalidate the final source.** Run every AGENTS.md validation gate,
+  Cargo.toml/Cargo.lock now identify an unpublished 0.5.2 candidate; draft notes
+  exist at `docs/releases/v0.5.2.md`. Hosted acceptance and final approval remain pending.
+  The frozen local input/executable identities and completed local gates are in
+  [candidate verification](docs/STABLE_0_5_2_CANDIDATE_VERIFICATION.md); hosted
+  acceptance and final release-note approval remain separate.
+- [x] **R4 — Revalidate the final source locally.** Run every AGENTS.md validation gate,
   resolver/public CLI/core regressions, synthetic corpus and ablations. Retain
   refusals, omissions, source fingerprints and exact final rendered-token counts.
+  194 tests and strict Clippy passed; 153 integration tests also passed with the
+  frozen optimized executable, and optional Gitleaks passed separately. Synthetic
+  corpus retains 56 token-budget refusals; acceptance is not task success.
 - [ ] **R5 — Runtime and distribution acceptance.** Exercise CLI defaults,
   explicit TUI, MCP, freshness/security/scan failures and install/uninstall/PATH
   behavior. Check native-host results separately from cross-compilation. Obtain
   hosted CI/build results for the release targets; resolve failures before
   claiming those platforms are supported by this release.
+  The previously merged baseline `0c63db8` passed all six hosted CI jobs on
+  2026-10-15, including native Windows/macOS/Linux tests, release builds and
+  synthetic retrieval controls. This does not validate later candidate edits.
+  Local candidate TUI/stdin MCP smokes, three unchanged-deadline worker repeats
+  and the generated 500-by-200 graph/mutation check passed. These do not close
+  the historical timeout or validate the external whole-repo stall. The user
+  authorized DEV push and empty-tag six-target build-only CI after local checks;
+  no main merge, public release or installed-binary replacement is included.
 - [ ] **R6 — Publish only with authorization.** Verify the remote branch and unused
   annotated `v0.5.2` tag, workflow start, asset names/checksums and actual downloads.
   Update package-manager submissions only after immutable assets exist. Preserve
@@ -60,6 +86,31 @@ development binary and local results; it is not final cross-platform acceptance.
 Full behavior-oriented retrieval is not required to ship this bounded patch.
 Reviewed public evidence is required before making new real-world accuracy or
 competitive claims, even if those experiments finish after the release.
+
+### Agent-usability acceptance from external feedback
+
+The 2026-10-16 pasted review is development feedback, not a controlled benchmark.
+Do not optimize for an agent's numeric praise or call this a 9/10 product without
+independent task evidence. Do not access the reviewer's private repositories.
+
+- [x] Reproduce the vague small-budget failure through actual MCP on an owned
+  fixture; add a red/green public MCP regression for limit, cause, recovery and
+  a successful bounded retry. Keep failure atomic; do not drop omission/security
+  information to manufacture acceptance.
+- [x] Reproduce naming/import inconsistency in a supported Python project;
+  retain import-derived test candidates with positive and unrelated negative
+  controls. This is not universal framework/test discovery.
+- [x] Add MCP initialization/tool-schema guidance for map-to-source follow-ups,
+  the default 8000-token whole-packet budget, overhead and narrow retries.
+- [ ] Obtain the sanitized exact version, command/request and complete scan
+  failure from the external whole-repository stall. Separate idle MCP lifetime,
+  native stderr handling, explicit scan refusals and an actually stuck operation.
+  Do not increase limits and claim a performance fix without a timing loop.
+- [ ] After freezing the candidate, measure first-call acceptance, retries,
+  required implementation/test coverage, useful tokens versus total tool traffic,
+  refusals, p50/p95 latency and peak memory on independently reviewed tasks.
+  Compare equal-budget baselines and count missed/blocked tasks. A subjective
+  6–7/10 review is a reason to investigate, not a measured 9+ release gate.
 
 ## DeepQuery gaps
 
@@ -129,6 +180,11 @@ P0 is an evaluation-integrity prerequisite; P1 is the next engineering sequence.
 - [ ] **D1/D2 — Resolution coverage.** Add supported cases incrementally with
   language-specific positive/negative regressions, config/probe invalidation and
   safe unresolved fallbacks. Measure false links, not just recovered links.
+  0.5.2 candidate review reproduced/fixed declared JS/TS classes incorrectly
+  capturing bare calls as member helpers, with all eight supported extension
+  variants covered. Preserve Java's supported implicit fields separately.
+  A baseline-confirmed Java bare method-call helper omission remains deferred;
+  this candidate must not claim complete Java method/call resolution.
 
 ### P2/P3 — Grounding, coverage and compiler evidence
 

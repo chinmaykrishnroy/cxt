@@ -1,12 +1,20 @@
 # Changelog
 
-## Unreleased (DEV)
+## 0.5.2 (unreleased candidate)
 
+- Prepare the bounded reference-resolution patch release; task retrieval remains experimental, not compiler-grade or a completed DeepQuery architecture.
+- Include the prerelease's supported Python/JS/TS import/local bindings, weighted evidence-bearing traversal and unresolved-reference diagnostics in the stable candidate.
 - Preserve Rust impl owners in method identities (for example `IndexStore::load`), without treating impl members as ordinary lexical functions. Full type/trait resolution remains unsupported.
 - Keep focused supporting imports in ancestor scopes rather than copying imports from unrelated nested modules/functions. Invalidate older symbol-cache metadata.
+- Do not resolve bare JavaScript/TypeScript calls through declared-class member namespaces; preserve supported Java implicit field lookup. Share the correction across retrieval and focused helper retention, and invalidate older parser metadata. Java method-call helper expansion remains incomplete.
 - Give import-only query expansion a supporting score instead of inheriting its anchor's relevance; preserve independent lexical/graph evidence when merging candidates.
 - Re-render output-only TUI settings from reviewed snapshots without rescanning. Source-affecting settings and output-path changes still refresh; stale-source export checks remain mandatory.
 - Report a disconnected TUI worker instead of spinning indefinitely. The historical intermittent ten-second test timeout remains under investigation; no deadline increase is used as a fix.
+- Drain queued current-revision responses before the TUI test harness declares a timeout; retain the same deadline and verify obsolete responses still time out. This corrects a reproducible false-timeout path, not proof of the historical failure's cause.
+- Retain per-platform synthetic retrieval reports as CI artifacts for review, including any recorded failures; this does not create release assets or turn packet acceptance into retrieval success.
+- Make token refusals name the CLI/MCP budget and explain rendered overhead, safe retries and that no context was exported; distinguish output-byte failures from token failures.
+- Retain import-derived tests in MCP related-test discovery even when their filenames differ from the source module. Unrelated tests remain excluded by the existing bounded heuristics.
+- Advertise per-tool MCP purpose and packet-budget overhead during discovery, including map-to-implementation follow-ups and actionable no-test guidance.
 
 ## 0.5.2-dev.1 (2026-10-15, prerelease)
 

@@ -15,6 +15,155 @@ fn call_tool(
 }
 
 #[test]
+fn insufficient_mcp_budget_reports_the_limit_and_safe_recovery() {
+    let dir = tempfile::tempdir().unwrap();
+    common::write_file(
+        dir.path(),
+        "leaves.py",
+        "def approve_leave(employee):\n    return employee\n",
+    );
+    let result = call_tool(
+        dir.path(),
+        "get_repo_map",
+        serde_json::json!({"paths":["leaves.py"],"max_tokens":100}),
+    );
+    assert_eq!(result["isError"], true, "{result}");
+    assert!(result.get("structuredContent").is_none(), "{result}");
+    let message = result["content"][0]["text"].as_str().unwrap();
+    assert!(message.contains("max_tokens=100"), "{message}");
+    assert!(message.contains("Increase max_tokens"), "{message}");
+    assert!(message.contains("narrow"), "{message}");
+    assert!(message.contains("No context was exported"), "{message}");
+    let retry = call_tool(
+        dir.path(),
+        "get_repo_map",
+        serde_json::json!({"paths":["leaves.py"],"max_tokens":2000}),
+    );
+    assert_eq!(retry["isError"], false, "{retry}");
+    assert_eq!(
+        retry["structuredContent"]["files"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(
+        retry["structuredContent"]["metadata"]["estimated_tokens"]
+            .as_u64()
+            .unwrap()
+            <= 2000
+    );
+}
+
+#[test]
+fn related_tests_retains_reverse_import_matches_with_matching_or_different_names() {
+    let dir = tempfile::tempdir().unwrap();
+    common::write_file(
+        dir.path(),
+        "pyproject.toml",
+        "[project]\nname = 'import-related-tests'\nversion = '0.0.0'\n",
+    );
+    common::write_file(
+        dir.path(),
+        "app/leaves.py",
+        "def approve_leave(employee):\n    return employee\n",
+    );
+    for name in ["tests/test_leaves.py", "tests/test_workflow.py"] {
+        common::write_file(dir.path(), name, "from app.leaves import approve_leave\n\ndef test_approval():\n    assert approve_leave(1) == 1\n");
+    }
+    common::write_file(
+        dir.path(),
+        "tests/test_reports.py",
+        "def test_report():\n    assert 1 == 1\n",
+    );
+    let result = call_tool(
+        dir.path(),
+        "get_related_tests",
+        serde_json::json!({"paths":["app/leaves.py"],"max_tokens":4000}),
+    );
+    assert_eq!(result["isError"], false, "{result}");
+    let paths: Vec<_> = result["structuredContent"]["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|file| file["path"].as_str())
+        .collect();
+    assert!(
+        paths.iter().any(|p| p.ends_with("test_leaves.py")),
+        "{result}"
+    );
+    assert!(
+        paths.iter().any(|p| p.ends_with("test_workflow.py")),
+        "{result}"
+    );
+    assert!(
+        !paths.iter().any(|p| p.ends_with("test_reports.py")),
+        "{result}"
+    );
+}
+
+#[test]
+fn tool_discovery_explains_budget_overhead_and_map_to_source_followups() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut server = cxt_core::mcp::Server::new(dir.path()).unwrap();
+    server.request(serde_json::json!({"jsonrpc":"2.0","id":0,"method":"initialize"}));
+    server.request(serde_json::json!({"jsonrpc":"2.0","method":"notifications/initialized"}));
+    let reply = server
+        .request(serde_json::json!({"jsonrpc":"2.0","id":1,"method":"tools/list"}))
+        .unwrap();
+    let tools = reply["result"]["tools"].as_array().unwrap();
+    let search = tools.iter().find(|tool| tool["name"] == "search").unwrap();
+    let description = search["description"].as_str().unwrap();
+    assert!(description.contains("maps"), "{description}");
+    assert!(description.contains("get_symbol"), "{description}");
+    for tool in tools {
+        let budget = tool["inputSchema"]["properties"]["max_tokens"]["description"]
+            .as_str()
+            .unwrap();
+        assert!(
+            budget.contains("metadata") && budget.contains("8000"),
+            "{budget}"
+        );
+    }
+}
+
+#[test]
+fn javascript_class_methods_are_not_bare_name_lexical_helpers() {
+    for extension in ["js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts"] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = format!("screen.{extension}");
+        common::write_file(dir.path(), &path, "function helper() { return \"global helper\"; }\nclass Screen {\n    helper() { return \"member helper\"; }\n    changeVolume() { return helper(); }\n}\n");
+        let result = call_tool(
+            dir.path(),
+            "get_symbol",
+            serde_json::json!({"paths":[path],"symbol":"Screen::changeVolume","max_tokens":2000}),
+        );
+        assert_eq!(result["isError"], false, "{extension}: {result}");
+        let content = result["structuredContent"]["files"][0]["content"]
+            .as_str()
+            .unwrap();
+        assert!(content.contains("global helper"), "{extension}: {content}");
+        assert!(!content.contains("member helper"), "{extension}: {content}");
+    }
+}
+
+#[test]
+fn java_bare_fields_still_retain_implicit_members() {
+    let dir = tempfile::tempdir().unwrap();
+    common::write_file(dir.path(), "Screen.java", "class Screen {\n    String level = \"java member evidence\";\n    String readLevel() { return level; }\n}\n");
+    let result = call_tool(
+        dir.path(),
+        "get_symbol",
+        serde_json::json!({"paths":["Screen.java"],"symbol":"Screen::readLevel","max_tokens":2000}),
+    );
+    assert_eq!(result["isError"], false, "{result}");
+    assert!(result["structuredContent"]["files"][0]["content"]
+        .as_str()
+        .unwrap()
+        .contains("java member evidence"));
+}
+
+#[test]
 fn qualified_rust_method_selects_its_impl_instead_of_same_named_methods() {
     let dir = tempfile::tempdir().unwrap();
     common::write_file(dir.path(), "store.rs", "struct Alpha;\nimpl Alpha { pub fn load(&self) -> &'static str { \"alpha implementation\" } }\nstruct Beta;\nimpl Beta { pub fn load(&self) -> &'static str { \"beta implementation\" } }\n");

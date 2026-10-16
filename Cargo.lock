@@ -450,7 +450,7 @@ dependencies = [
 
 [[package]]
 name = "cxt-ai"
-version = "0.5.2-dev.1"
+version = "0.5.2"
 dependencies = [
  "arboard",
  "clap",

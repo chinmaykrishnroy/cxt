@@ -35,6 +35,39 @@ On Windows use an absolute executable path if the client does not inherit your s
 
 Arguments: optional workspace-relative `paths` (1–32), `query` (up to 1024 UTF-8 bytes), `symbol`, `context` (`complete|map|focused|adaptive`), `max_tokens` (1–32000, default 8000), and `git`. Unknown keys and invalid types are rejected. Tool results contain text plus structured `cxt.context.v1` JSON; errors set `isError`. JSON-RPC initialization/initialized notification must precede tool operations. Transport is newline-delimited stdio, protocol negotiation for 2025-03-26 / 2025-06-18; no HTTP endpoint.
 
+## Agent workflow and recovery
+
+Start with a project subdirectory or a few entry files and leave `max_tokens`
+at its 8000 default unless the task warrants another budget. `search` and
+`get_repo_map` return maps, not implementation bodies. Follow promising names
+with `get_symbol`, or request `get_context` with `context: "focused"` and a
+task query. Inspect representations, original-source spans and omissions after
+each call; a successful packet can still omit the implementation you need.
+
+The token budget includes the **rendered JSON packet**, including source,
+metadata, selection reasons and omission diagnostics. It is not a source-only
+allowance or a measurement of a client's complete model/protocol bill. A
+400-token search or 1200-token whole-repository map can refuse export even
+when individual source snippets are small. When this happens, the error names
+`max_tokens`, explains overhead and suggests increasing it (up to 32000) or
+narrowing paths/query. Raising it to 32000 is not a universal fix: a client can
+still truncate a large response. Prefer a focused follow-up over a repository dump.
+
+`get_related_tests` uses filename similarity and test files reached through
+bounded reverse-import edges. It does not understand every test framework,
+fixture injection, HTTP-client call or dynamic test setup. No matches is not
+proof that no relevant tests exist: try `search` using the behavior and test
+terms, then inspect the resulting source. Naming/import associations remain
+heuristics, not verified behavioral coverage.
+
+For a suspected stall, record `cxt --version`, the exact request/command, elapsed
+time, exit status and full sanitized error. Scan limits refuse export rather than
+return partial context; MCP's limits are fixed, so narrow requests rather than
+adding unsupported CLI limit flags. A `--mcp` process normally stays alive waiting
+for the next stdio request; that alone is not a hung scan. CLI status messages on
+stderr are not themselves failure evidence: distinguish PowerShell's handling of
+native stderr from cxt's exit status and its explicit scan/error diagnostics.
+
 ## Boundaries
 
 - One canonical directory; absolute, parent-relative and outside symlink paths are rejected. Git root must also be inside it.

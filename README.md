@@ -26,6 +26,10 @@ Want to test the query-resolution preview? Read the explicit opt-in instructions
 and known limitations for [0.5.2-dev.1](docs/releases/v0.5.2-dev.1.md).
 The stable installation commands below remain on the latest stable release.
 
+The next stable [0.5.2 candidate](docs/releases/v0.5.2.md) is being validated;
+it is not yet published. Its draft notes distinguish supported improvements from
+remaining retrieval and timeout limitations.
+
 ## Why cxt?
 
 Coding agents can already search repositories. cxt gives you an explicit, inspectable **handoff boundary**: choose source, enforce limits, review omissions, and reuse the same packet across tools, issues and teammates.
