@@ -714,6 +714,18 @@ pub fn extract(path: &Path, source: &str) -> SourceIndex {
             .map(|name| crate::security::redact_secrets(name).0)
             .collect();
     }
+    if matches!(
+        ext,
+        "js" | "jsx" | "mjs" | "cjs" | "ts" | "tsx" | "mts" | "cts"
+    ) {
+        for symbol in &index.symbols {
+            if symbol.kind == "class_declaration" {
+                index
+                    .non_lexical_scopes
+                    .insert(symbol.qualified_name.clone());
+            }
+        }
+    }
     index.identifiers = index
         .identifiers
         .into_iter()

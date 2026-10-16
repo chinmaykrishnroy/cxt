@@ -5,6 +5,42 @@ selected original source before editing it. This is a development practice, not
 a claim that every operation is possible through MCP or a background monitor.
 Contracts and client configuration examples are in [MCP.md](MCP.md).
 
+## 2026-10-16: external agent feedback reproduced locally
+
+No cxt connector was exposed, so the frozen trusted `cxt-dev-mcp-tui.exe` was
+used over actual stdio. Private repositories mentioned in the feedback were
+not accessed. An owned tiny Python fixture reproduced:
+
+- `get_repo_map`, one short function, `max_tokens: 100`: the original
+  `metadata/output overhead exceeds the configured limit` error. A public MCP
+  red/green regression now requires the requested limit, overhead explanation,
+  narrow/increase recovery and no exported packet, then retries successfully at
+  2000. Byte limits remain distinguished from token refusals.
+- `get_related_tests` on `app/leaves.py`: no tests, despite a supported project
+  root and tests importing that module. The filter discarded reverse-import
+  candidates before returning results. Public regression covers both matching
+  and different filenames, plus an unrelated test excluded from the packet.
+  The first fixture lacked a project marker; a second red run supplied
+  `pyproject.toml` to distinguish root inference from the filter bug.
+- Generic tool descriptions did not explain packet budgets or map-only search.
+  A tools/list red/green regression now covers upfront overhead/default guidance
+  and source follow-up direction.
+
+Local logs: `target/evaluation/feedback-{budget,related,discovery}-{red,green}.txt`
+and `feedback-related-project-red.txt`. Final candidate validation follows these
+changes; earlier pre-feedback test/build attempts are not final-source proof.
+The public evaluation check additionally caught new capitalized budget wording
+being categorized as `cli_error`. The first focused-context test did not reach
+metadata overhead; the complete-context counterpart reproduced it. The wording
+now preserves the established `token_budget` category, with a public CLI
+regression. Preserve `feedback-category-complete-red.txt` and
+`feedback-category-green.txt`; do not count the initial ineffective probe as red.
+
+The externally reported whole-repo stall remains unverified: exact version,
+command/request and full stderr were requested. An idle stdio MCP process and
+PowerShell rendering native status on stderr are not by themselves a hung scan.
+No scan timeout, security policy, scope bound or response cap was weakened.
+
 ## Procedure
 
 1. Check the available connector and executable version. Prefer the registered
@@ -136,3 +172,54 @@ requests are retained but are not a latency distribution or evidence of a speedu
 See [DEV verification](DEV_MCP_TUI_VERIFICATION.md) for local test gates and the
 separate, still-open historical TUI deadline issue. No held-out task contents,
 external model calls, downstream coding experiment or superiority claim is involved.
+
+## 2026-10-16: stable-candidate scope review
+
+No cxt connector was exposed; actual stdio MCP requests used the frozen DEV
+executable identified above. `get_symbol` located `Workspace::load` (1,526 packet
+tokens), `ScanBudget::new` (678), and the TUI test `ready` helper (1,668), with no
+omissions. Original source was checked before editing. A request for
+`TokenCounter::new` failed because that function does not exist; the narrow source
+fallback found `TokenCounter::for_model`. This is a request correction, not a
+product regression. The TUI helper's pre-poll timeout ordering went red in a
+zero-wait queued-result test; polling first fixes that case without increasing
+the deadline. The historical timeout cause remains unproven.
+
+### M4 — Declared JS/TS class namespaces
+
+A three-symbol local fixture reproduced incorrect helper selection:
+
+```javascript
+function helper() { return "global helper"; }
+class Screen {
+    helper() { return "member helper"; }
+    changeVolume() { return helper(); }
+}
+```
+
+`get_symbol` with `paths: ["screen.js"]`, `symbol: "Screen::changeVolume"`,
+`max_tokens: 2000` returned the member helper instead of the global function.
+The corresponding public MCP regression went red before the fix and green across
+`js`, `jsx`, `mjs`, `cjs`, `ts`, `tsx`, `mts`, and `cts`. The correction marks
+declared JS/TS class scopes non-lexical in shared parser metadata, used by both
+graph and focused-helper binding. Schema `cxt.symbols.v17-js-class-namespaces-tree-sitter-0.20`
+invalidates earlier metadata. This is not compiler/type or class-expression
+resolution; no new resolver reads or persistent MCP writes are introduced.
+
+A proposed Java method-call guard failed. A stdio probe of the unchanged frozen
+baseline confirmed it already omits the bare-called helper; it was not caused
+by the JS-specific fix. Keep that missing coverage in the backlog. A separate
+baseline-validated Java implicit-field case guards against applying JS namespace
+rules to other languages. The original failure remains in the local
+`target/evaluation/stable052-mcp-final.txt`, rather than being overwritten by the
+corrected guard in `stable052-mcp-corrected.txt`.
+
+A focused `extract` request for `src/symbols.rs` at 2,400 tokens returned
+`no selected file fit after including rendered metadata overhead`; narrow source
+inspection was the fallback. This remains related to M1's budget/allocation gap.
+Do not confuse a successful map-oriented `search` with implementation coverage,
+or a fail-closed budget refusal with proof that a requested symbol was absent.
+
+The candidate notes in [v0.5.2.md](releases/v0.5.2.md) disclose deferred scope.
+No independent held-out data, external model execution, package publication or
+new release tag was used in this review.

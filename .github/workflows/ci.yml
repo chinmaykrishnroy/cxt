@@ -46,6 +46,16 @@ jobs:
         run: cargo run --locked --release -- --evaluate eval/relationships.json --output target/relationships-report.json
       - name: Exercise import-binding retrieval controls
         run: cargo run --locked --release -- --evaluate eval/bindings.json --output target/bindings-report.json
+      - name: Retain retrieval validation reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: retrieval-validation-${{ matrix.os }}
+          path: |
+            target/ablation-report.json
+            target/relationships-report.json
+            target/bindings-report.json
+          if-no-files-found: ignore
 
   quality:
     name: Tests and Clippy

@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-const SCHEMA: &str = "cxt.symbols.v16-scoped-imports-tree-sitter-0.20";
+const SCHEMA: &str = "cxt.symbols.v17-js-class-namespaces-tree-sitter-0.20";
 const MAX_CACHE_BYTES: u64 = 8 * 1024 * 1024;
 
 pub struct IndexStore {

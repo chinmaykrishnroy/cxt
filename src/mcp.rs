@@ -16,6 +16,18 @@ const TOOLS: &[&str] = &[
     "get_repo_map",
 ];
 
+fn tool_description(name: &str) -> &'static str {
+    match name {
+        "search" => "Read-only query-ranked symbol maps, not implementation bodies. Use get_symbol or focused get_context to inspect source; check omissions before treating a result as complete.",
+        "get_repo_map" => "Read-only structural symbol maps for orientation, not implementation coverage. Scope paths first; use get_symbol or focused get_context for source bodies.",
+        "get_symbol" => "Read-only original-source implementation and supporting imports for a symbol; requires symbol. Use qualified names from a map to disambiguate; static helper resolution is incomplete.",
+        "trace" => "Read-only static import/dependency context from explicit entry-file paths. Dependencies may be omitted by budget or unresolved; inspect omissions before following the complete flow.",
+        "get_related_tests" => "Read-only test suggestions from bounded reverse imports and filename heuristics for entry-file paths, or Git changes when paths are absent. No matches does not prove no tests exist; try search with behavior/test terms.",
+        "get_diff_context" => "Read-only current-checkout source selected by Git mode/range, default working; this is not historical patch content. Inspect representations and budget omissions.",
+        _ => "Read-only complete, focused or adaptive source context for paths/query. Narrow paths for implementations; inspect source spans, reasons and omissions. Static retrieval does not prove task completeness.",
+    }
+}
+
 pub struct Server {
     root: PathBuf,
     started: bool,
@@ -74,12 +86,12 @@ impl Server {
                     "2025-03-26"
                 };
                 Ok(
-                    json!({"protocolVersion":version,"capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"cxt","version":env!("CARGO_PKG_VERSION")},"instructions":"Read-only local source context; spans and imports are static approximations, not proof of completeness."}),
+                    json!({"protocolVersion":version,"capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"cxt","version":env!("CARGO_PKG_VERSION")},"instructions":"Read-only local source context; spans and imports are static approximations, not proof of completeness. Start with scoped paths and the default 8000-token packet budget; metadata and omission diagnostics count too. Search returns maps: follow with get_symbol or focused get_context for implementations. Inspect omissions and retry narrowly when evidence is missing."}),
                 )
             }
             "ping" => Ok(json!({})),
             "tools/list" if self.initialized => Ok(
-                json!({"tools":TOOLS.iter().map(|name| json!({"name":name,"description":format!("Read-only {name}: sanitized context and original-source spans in the configured workspace"),"inputSchema":{"type":"object","properties":{"paths":{"type":"array","items":{"type":"string"}},"query":{"type":"string","maxLength":1024},"symbol":{"type":"string"},"context":{"type":"string","enum":["complete","map","focused","adaptive"]},"max_tokens":{"type":"integer","minimum":1,"maximum":32000},"git":{"type":"string"}},"additionalProperties":false},"annotations":{"readOnlyHint":true,"destructiveHint":false,"openWorldHint":false}})).collect::<Vec<_>>()}),
+                json!({"tools":TOOLS.iter().map(|name| json!({"name":name,"description":tool_description(name),"inputSchema":{"type":"object","properties":{"paths":{"type":"array","items":{"type":"string"},"description":"1–32 workspace-relative candidate seeds; dependencies/query tools can expand within the authorized workspace. Paths are not pins or an access-control allowlist. Narrow to a project subdirectory for large repositories."},"query":{"type":"string","maxLength":1024},"symbol":{"type":"string"},"context":{"type":"string","enum":["complete","map","focused","adaptive"]},"max_tokens":{"type":"integer","minimum":1,"maximum":32000,"description":"Rendered JSON packet budget, including source, metadata and omission diagnostics; default 8000, maximum 32000. Small budgets can refuse export. Increase within the cap or narrow paths/query; never assume omitted files are irrelevant."},"git":{"type":"string"}},"additionalProperties":false},"annotations":{"readOnlyHint":true,"destructiveHint":false,"openWorldHint":false}})).collect::<Vec<_>>()}),
             ),
             "tools/call" if self.initialized => {
                 let params = &request["params"];
@@ -207,12 +219,14 @@ impl Server {
                 let tests: Vec<_> = expanded
                     .candidates
                     .into_iter()
-                    .filter(|(_, reason)| reason == "related-test")
+                    .filter(|(path, reason)| {
+                        reason == "related-test" || crate::impact::looks_like_test(path)
+                    })
                     .map(|(path, _)| path)
                     .collect();
                 if tests.is_empty() {
                     return Ok(
-                        json!({"schema":"cxt.context.v1","files":[],"warnings":["No related tests found by static naming/import heuristics"]}),
+                        json!({"schema":"cxt.context.v1","files":[],"warnings":["No related tests found by static naming/import heuristics; this does not prove there are no tests. Try search with the behavior or test terms and inspect candidate implementations."]}),
                     );
                 }
                 args.paths = tests;
