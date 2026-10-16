@@ -1,6 +1,6 @@
 # cxt delivery TODO
 
-Status checked against the local **0.5.2 unpublished candidate** on 2026-10-16.
+Status checked against the **0.5.2 stable release preparation** on 2026-10-16.
 This is the actionable backlog; [ROADMAP.md](ROADMAP.md) provides historical
 milestones and [the query architecture](docs/QUERY_ARCHITECTURE.md) defines the
 target contracts. Unchecked items are not implemented or verified capabilities.
@@ -12,7 +12,7 @@ rather than describe the whole DeepQuery architecture as complete. The
 [verification report](docs/QUERY_ARCHITECTURE_VERIFICATION.md) records the tested
 development binary and local results; it is not final cross-platform acceptance.
 
-- [ ] **R1 — Freeze and review scope.** Review the binding/resolution changes,
+- [x] **R1 — Freeze and review scope.** Review the binding/resolution changes,
   supported syntax and negative cases. Triage the MCP findings in
   [the dogfooding log](docs/MCP_DOGFOODING.md); decide which are release blockers
   and document any deferred limitations. Keep candidate-wide secret fail-policy.
@@ -25,7 +25,7 @@ development binary and local results; it is not final cross-platform acceptance.
   in search alone are not an implementation-export failure. Low-budget multi-file
   coverage stays a disclosed heuristic limitation. Persistent lexical/session
   indexes and full behavior-oriented retrieval are deferred, not silently claimed.
-- [ ] **R2 — Investigate intermittent TUI worker timeout.** Retain the failed run,
+- [x] **R2 — Investigate intermittent TUI worker timeout.** Retain the failed run,
   reproduce under controlled load, distinguish deadline sensitivity from a lost
   worker result, and record the disposition. A green rerun alone is not a fix;
   increasing the timeout alone is not a diagnosis.
@@ -49,16 +49,21 @@ development binary and local results; it is not final cross-platform acceptance.
   being reported stalled because the helper checked elapsed time before polling.
   Poll ordering is corrected without widening the deadline; an obsolete-response
   counterpart guards against accepting unfinished work. This is not proof of the
-  original failure's cause, so R2 remains open pending repeat measurements and
-  explicit disposition of load-sensitive scan refusals.
-- [ ] **R3 — Finalize release identity.** Change Cargo.toml/Cargo.lock to 0.5.2,
+  original failure's cause; repeat measurements and explicit disposition of
+  load-sensitive scan refusals are recorded below, not a root-cause claim.
+  Release disposition: ship the demonstrated polling/snapshot/disconnection
+  fixes with the unchanged cooperative scan guards. Retain heavy-load refusals
+  as an explicit fail-closed limitation, not a claim that all historical timeouts
+  were repaired. The user subsequently authorized the bounded stable release;
+  the external whole-repo stall remains an open reproduction request below.
+- [x] **R3 — Finalize release identity.** Change Cargo.toml/Cargo.lock to 0.5.2,
   finalize CHANGELOG.md, add `docs/releases/v0.5.2.md`, and align help/docs with
   the actual supported scope. Identify the exact source and executable hashes.
-  Cargo.toml/Cargo.lock now identify an unpublished 0.5.2 candidate; draft notes
-  exist at `docs/releases/v0.5.2.md`. Hosted acceptance and final approval remain pending.
+  Cargo.toml/Cargo.lock identify 0.5.2; versioned stable notes are finalized at
+  `docs/releases/v0.5.2.md`. The user authorized main merge and stable publication.
   The frozen local input/executable identities and completed local gates are in
   [candidate verification](docs/STABLE_0_5_2_CANDIDATE_VERIFICATION.md); hosted
-  acceptance and final release-note approval remain separate.
+  acceptance and published-asset verification remain separate.
 - [x] **R4 — Revalidate the final source locally.** Run every AGENTS.md validation gate,
   resolver/public CLI/core regressions, synthetic corpus and ablations. Retain
   refusals, omissions, source fingerprints and exact final rendered-token counts.
@@ -78,6 +83,12 @@ development binary and local results; it is not final cross-platform acceptance.
   the historical timeout or validate the external whole-repo stall. The user
   authorized DEV push and empty-tag six-target build-only CI after local checks;
   no main merge, public release or installed-binary replacement is included.
+  Superseding authorization: the user requested final release to main. Main
+  merge/tagging will follow the candidate six-target and final-source checks;
+  package-manager submissions and installed-user-binary replacement are separate.
+  The [candidate build-only run](https://github.com/chinmaykrishnroy/cxt/actions/runs/38864100676)
+  passed source validation and all six target build/package jobs. Publication
+  was skipped as intended. Final-main CI and tagged asset verification follow.
 - [ ] **R6 — Publish only with authorization.** Verify the remote branch and unused
   annotated `v0.5.2` tag, workflow start, asset names/checksums and actual downloads.
   Update package-manager submissions only after immutable assets exist. Preserve

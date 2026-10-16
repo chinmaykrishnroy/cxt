@@ -1,9 +1,9 @@
 # Changelog
 
-## 0.5.2 (unreleased candidate)
+## 0.5.2 (2026-10-16)
 
-- Prepare the bounded reference-resolution patch release; task retrieval remains experimental, not compiler-grade or a completed DeepQuery architecture.
-- Include the prerelease's supported Python/JS/TS import/local bindings, weighted evidence-bearing traversal and unresolved-reference diagnostics in the stable candidate.
+- Ship the bounded reference-resolution patch release; task retrieval remains experimental, not compiler-grade or a completed DeepQuery architecture.
+- Include the prerelease's supported Python/JS/TS import/local bindings, weighted evidence-bearing traversal and unresolved-reference diagnostics in the stable release.
 - Preserve Rust impl owners in method identities (for example `IndexStore::load`), without treating impl members as ordinary lexical functions. Full type/trait resolution remains unsupported.
 - Keep focused supporting imports in ancestor scopes rather than copying imports from unrelated nested modules/functions. Invalidate older symbol-cache metadata.
 - Do not resolve bare JavaScript/TypeScript calls through declared-class member namespaces; preserve supported Java implicit field lookup. Share the correction across retrieval and focused helper retention, and invalidate older parser metadata. Java method-call helper expansion remains incomplete.

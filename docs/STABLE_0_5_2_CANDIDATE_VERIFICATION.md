@@ -1,9 +1,12 @@
 # 0.5.2 candidate verification — 2026-10-16
 
-This is an **unpublished candidate**, not stable-release or package-manager
-acceptance. The user authorized a DEV commit/push and an empty-tag, six-target
-build-only workflow after local validation. No main merge, tag, public release,
-package update or installed-binary replacement is included.
+This historical report records the **pre-release DEV candidate** and its local
+evidence; it is not by itself stable-release or package-manager acceptance.
+The initial authorization covered DEV push and build-only validation. The user
+subsequently authorized the final main/stable release. See the versioned
+[release notes](releases/v0.5.2.md) for release disposition and hosted evidence.
+The candidate checks did not replace the installed user binary or update package
+manager submissions.
 
 ## Identity and boundaries
 

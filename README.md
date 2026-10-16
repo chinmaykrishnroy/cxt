@@ -20,15 +20,11 @@
 cxt --query "request retry policy" --context focused --model cl100k --budget 8000 --manifest --output context.md
 ```
 
-0.5.1 strengthens query retrieval with bounded caller/reference expansion, implementation-first budgeting, and annotated Rust-field selection. Symbol-level packets, exact named-tokenizer budgets, read-only MCP and portable agent skills remain shared across the CLI/TUI engine. **Task-aware retrieval remains experimental:** local lexical/structural ranking is not semantic search, and a successful export is not proof that every required implementation was found. See [measured results and limitations](docs/IMPLEMENTATION_STATUS.md).
+0.5.2 adds supported import/local binding resolution, evidence-weighted query expansion, qualified Rust method lookup, and more reliable reviewed TUI plans. MCP now explains packet-budget failures and retains import-related tests instead of relying only on filename matches. Symbol-level packets, exact named-tokenizer budgets, read-only MCP and portable agent skills remain shared across the CLI/TUI engine. **Task-aware retrieval remains experimental:** local lexical/structural ranking is not semantic search, and a successful export is not proof that every required implementation was found. See [0.5.2 release notes](docs/releases/v0.5.2.md) and [measured results and limitations](docs/IMPLEMENTATION_STATUS.md).
 
-Want to test the query-resolution preview? Read the explicit opt-in instructions
-and known limitations for [0.5.2-dev.1](docs/releases/v0.5.2-dev.1.md).
-The stable installation commands below remain on the latest stable release.
-
-The next stable [0.5.2 candidate](docs/releases/v0.5.2.md) is being validated;
-it is not yet published. Its draft notes distinguish supported improvements from
-remaining retrieval and timeout limitations.
+The stable installation commands below select GitHub's latest published stable
+release. A new tag's downloads become available only after its Release workflow
+publishes the assets; a green test job alone does not create binaries.
 
 ## Why cxt?
 
